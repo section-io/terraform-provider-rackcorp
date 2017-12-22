@@ -1,7 +1,8 @@
 package rackcorp
 
 import (
-	"log"
+	"fmt"
+	"strconv"
 	"bytes"
 	"encoding/json"
 	"net/http"
@@ -45,20 +46,45 @@ func resourceRackcorpServerCreate(d *schema.ResourceData, meta interface{}) erro
     }
 
 	order, err := http.Post(config.ApiAddress, "application/json", bytes.NewBuffer(orderRequestJson))
-
 	if err != nil {
         panic(err)
 	}
 
 	var orderResponse OrderResponse
-	json.NewDecoder(order.Body).Decode(&orderResponse)
-
-	log.Printf("%+v\n", orderResponse)
-
-	// catch the order Id, and make the next api call.
-
+	decodeErr := json.NewDecoder(order.Body).Decode(&orderResponse)
+    if decodeErr != nil {
+        panic(decodeErr)
+    }
 
 	defer order.Body.Close()
+
+	if (orderResponse.Code != "OK") { panic(orderResponse.Code) }
+
+	confirmRequest := ConfirmRequest{
+		ApiUuid: config.ApiUuid, 
+		ApiSecret: config.ApiSecret, 
+		Command: "order.confirm", 
+		CustomerId: config.CustomerId,
+		OrderId: strconv.Itoa(orderResponse.OrderId),
+	}
+
+	confirmRequestJson, err := json.Marshal(confirmRequest)
+    if err != nil {
+        panic(err)
+    }
+
+	confirm, err := http.Post(config.ApiAddress, "application/json", bytes.NewBuffer(confirmRequestJson))
+	var confirmResponse ConfirmResponse
+	decodeErr = json.NewDecoder(confirm.Body).Decode(&confirmResponse)
+    if decodeErr != nil {
+        panic(decodeErr)
+    }
+
+	if (confirmResponse.Code != "OK") { panic(fmt.Sprintf("%#v\n", confirmResponse)) }
+
+	// panic(fmt.Sprintf("%#v\n", confirmResponse))
+
+	defer confirm.Body.Close()
 
 	return resourceRackcorpServerRead(d, meta)
 }
@@ -77,5 +103,18 @@ type OrderRequest struct {
 
 type OrderResponse struct {
 	Code string `json:"code"`
+	OrderId int `json:"orderId"`
+}
+
+type ConfirmRequest struct {
+	ApiUuid string `json:"APIUUID"`
+	ApiSecret string `json:"APISECRET"`
+	Command string `json:"cmd"`
 	OrderId string `json:"orderId"`
+	CustomerId string `json:"customerId"`
+}
+
+type ConfirmResponse struct {
+	Code string `json:"code"`
+	ContractId []int `json:"contractID"`
 }
