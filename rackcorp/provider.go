@@ -8,13 +8,13 @@ import (
 func Provider() terraform.ResourceProvider {
 	return &schema.Provider{
 		Schema: map[string]*schema.Schema{
-			"ApiUuid": {
+			"api_uuid": {
 				Type:        schema.TypeString,
 				Required:    true,
 				DefaultFunc: schema.EnvDefaultFunc("RACKCORP_API_UUID", nil),
 				Description: "The API UUID provided by Rackcorp.",
 			},
-			"ApiSecret": {
+			"api_secret": {
 				Type:        schema.TypeString,
 				Required:    true,
 				DefaultFunc: schema.EnvDefaultFunc("RACKCORP_API_SECRET", nil),
@@ -32,8 +32,8 @@ func Provider() terraform.ResourceProvider {
 
 func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	config := Config{
-		ApiUuid: d.Get("ApiUuid").(string),
-		ApiSecret: d.Get("ApiSecret").(string),
+		ApiUuid: d.Get("api_uuid").(string),
+		ApiSecret: d.Get("api_secret").(string),
 	}
 
 	return config, nil
