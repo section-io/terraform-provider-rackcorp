@@ -6,4 +6,5 @@ provider "rackcorp" {
 
 resource "rackcorp_server" "example" {
 	country = "the-country-from-tf"
+	server_class = "the-server_class-from-tf"
 }
