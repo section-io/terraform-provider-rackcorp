@@ -25,10 +25,13 @@ func resourceRackcorpServer() *schema.Resource {
 func resourceRackcorpServerCreate(d *schema.ResourceData, meta interface{}) error {
 	config := meta.(Config)
 
-	orderRequest := OrderRequest{ApiUuid: config.ApiUuid, 
+	orderRequest := OrderRequest {
+		ApiUuid: config.ApiUuid, 
 		ApiSecret: config.ApiSecret, 
 		Command: "order.create", 
-		CustomerId: config.CustomerId}
+		CustomerId: config.CustomerId,
+		ProductCode: "SERVER_VIRTUAL_PERFORMANCE_AU",
+	}
 
 	orderRequestJson, err := json.Marshal(orderRequest)
     if err != nil {
