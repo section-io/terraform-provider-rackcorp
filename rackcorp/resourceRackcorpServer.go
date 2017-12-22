@@ -25,7 +25,10 @@ func resourceRackcorpServer() *schema.Resource {
 func resourceRackcorpServerCreate(d *schema.ResourceData, meta interface{}) error {
 	config := meta.(Config)
 
-	orderRequest := OrderRequest{ApiUuid: config.ApiUuid, ApiSecret: config.ApiSecret, Command: "order.create"}
+	orderRequest := OrderRequest{ApiUuid: config.ApiUuid, 
+		ApiSecret: config.ApiSecret, 
+		Command: "order.create", 
+		CustomerId: config.CustomerId}
 
 	orderRequestJson, err := json.Marshal(orderRequest)
     if err != nil {
