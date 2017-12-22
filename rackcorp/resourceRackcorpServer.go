@@ -1,6 +1,7 @@
 package rackcorp
 
 import (
+	"log"
 	"bytes"
 	"encoding/json"
 	"net/http"
@@ -48,6 +49,15 @@ func resourceRackcorpServerCreate(d *schema.ResourceData, meta interface{}) erro
 	if err != nil {
         panic(err)
 	}
+
+	var orderResponse OrderResponse
+	json.NewDecoder(order.Body).Decode(orderResponse)
+
+	log.Printf("%+v\n", orderResponse)
+
+	// catch the order Id, and make the next api call.
+	
+
 	defer order.Body.Close()
 
 	return resourceRackcorpServerRead(d, meta)
@@ -63,4 +73,9 @@ type OrderRequest struct {
 	Command string `json:"cmd"`
 	ProductCode string `json:"productCode"`
 	CustomerId string `json:"customerId"`
+}
+
+type OrderResponse struct {
+	Code string `json:"code"`
+	OrderId string `json:"orderId"`
 }
