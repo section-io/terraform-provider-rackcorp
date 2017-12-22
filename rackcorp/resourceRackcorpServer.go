@@ -43,10 +43,10 @@ func resourceRackcorpServerCreate(d *schema.ResourceData, meta interface{}) erro
         panic(err)
     }
 
-	order, err := http.Post("https://requestb.in/txetp8tx", "application/json", bytes.NewBuffer(orderRequestJson))
+	order, err := http.Post(config.ApiAddress, "application/json", bytes.NewBuffer(orderRequestJson))
 
 	if err != nil {
-		// handle error
+        panic(err)
 	}
 	defer order.Body.Close()
 
