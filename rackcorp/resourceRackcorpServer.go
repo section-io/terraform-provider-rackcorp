@@ -13,9 +13,9 @@ func resourceRackcorpServer() *schema.Resource {
 			Delete:   resourceRackcorpServerRead,
 			Read:   resourceRackcorpServerRead,
 			Schema: map[string]*schema.Schema{
-						"image": {
+						"country": {
 						Type:     schema.TypeString,
-						Optional: true,
+						Required: true,
 						ForceNew: true,
 				},
 			},
@@ -30,7 +30,7 @@ func resourceRackcorpServerCreate(d *schema.ResourceData, meta interface{}) erro
 		ApiSecret: config.ApiSecret, 
 		Command: "order.create", 
 		CustomerId: config.CustomerId,
-		ProductCode: "SERVER_VIRTUAL_PERFORMANCE_AU",
+		ProductCode: "SERVER_VIRTUAL_PERFORMANCE_" + d.Get("country").(string),
 	}
 
 	orderRequestJson, err := json.Marshal(orderRequest)
