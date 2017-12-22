@@ -25,6 +25,11 @@ func resourceRackcorpServer() *schema.Resource {
 						Required: true,
 						ForceNew: true,
 					},
+					"operating_system": {
+						Type:	schema.TypeString,
+						Required: true,
+						ForceNew: true,
+					},
 			},
 		}
 }
@@ -32,12 +37,21 @@ func resourceRackcorpServer() *schema.Resource {
 func resourceRackcorpServerCreate(d *schema.ResourceData, meta interface{}) error {
 	config := meta.(Config)
 
+	install := Install {
+		OperatingSystem: d.Get("server_class").(string),
+	}
+
+	productDetails := ProductDetails {
+		Install: install,
+	}
+
 	orderRequest := OrderRequest {
 		ApiUuid: config.ApiUuid, 
 		ApiSecret: config.ApiSecret, 
 		Command: "order.create", 
 		CustomerId: config.CustomerId,
 		ProductCode: "SERVER_VIRTUAL_" + d.Get("server_class").(string) + "_" + d.Get("country").(string),
+		ProductDetails: productDetails,
 	}
 
 	orderRequestJson, err := json.Marshal(orderRequest)
@@ -99,6 +113,15 @@ type OrderRequest struct {
 	Command string `json:"cmd"`
 	ProductCode string `json:"productCode"`
 	CustomerId string `json:"customerId"`
+	ProductDetails ProductDetails `json:"productDetails"`
+}
+
+type ProductDetails struct {
+	Install Install `json:"install"`
+}
+
+type Install struct {
+	OperatingSystem string `json:"operatingSystem"`
 }
 
 type OrderResponse struct {
