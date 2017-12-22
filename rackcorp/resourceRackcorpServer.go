@@ -51,12 +51,12 @@ func resourceRackcorpServerCreate(d *schema.ResourceData, meta interface{}) erro
 	}
 
 	var orderResponse OrderResponse
-	json.NewDecoder(order.Body).Decode(orderResponse)
+	json.NewDecoder(order.Body).Decode(&orderResponse)
 
 	log.Printf("%+v\n", orderResponse)
 
 	// catch the order Id, and make the next api call.
-	
+
 
 	defer order.Body.Close()
 
