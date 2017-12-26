@@ -20,7 +20,7 @@ func safeClose(c io.Closer, err *error) {
 func resourceRackcorpServer() *schema.Resource {
 	return &schema.Resource{
 		Create: resourceRackcorpServerCreate,
-		Delete: resourceRackcorpServerRead,
+		Delete: resourceRackcorpServerDelete,
 		Read:   resourceRackcorpServerRead,
 		Schema: map[string]*schema.Schema{
 			"country": {
@@ -116,6 +116,10 @@ func resourceRackcorpServerCreate(d *schema.ResourceData, meta interface{}) (out
 }
 
 func resourceRackcorpServerRead(d *schema.ResourceData, meta interface{}) error {
+	return nil
+}
+
+func resourceRackcorpServerDelete(d *schema.ResourceData, meta interface{}) error {
 	return nil
 }
 
