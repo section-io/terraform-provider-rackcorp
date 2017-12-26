@@ -1,100 +1,105 @@
 package rackcorp
 
 import (
-	"fmt"
-	"strconv"
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"strconv"
+
 	"github.com/hashicorp/terraform/helper/schema"
 )
 
 func resourceRackcorpServer() *schema.Resource {
 	return &schema.Resource{
-			Create: resourceRackcorpServerCreate,
-			Delete:   resourceRackcorpServerRead,
-			Read:   resourceRackcorpServerRead,
-			Schema: map[string]*schema.Schema{
-					"country": {
-						Type:     schema.TypeString,
-						Required: true,
-						ForceNew: true,
-					},
-					"server_class": {
-						Type:     schema.TypeString,
-						Required: true,
-						ForceNew: true,
-					},
-					"operating_system": {
-						Type:	schema.TypeString,
-						Required: true,
-						ForceNew: true,
-					},
+		Create: resourceRackcorpServerCreate,
+		Delete: resourceRackcorpServerRead,
+		Read:   resourceRackcorpServerRead,
+		Schema: map[string]*schema.Schema{
+			"country": {
+				Type:     schema.TypeString,
+				Required: true,
+				ForceNew: true,
 			},
-		}
+			"server_class": {
+				Type:     schema.TypeString,
+				Required: true,
+				ForceNew: true,
+			},
+			"operating_system": {
+				Type:     schema.TypeString,
+				Required: true,
+				ForceNew: true,
+			},
+		},
+	}
 }
 
 func resourceRackcorpServerCreate(d *schema.ResourceData, meta interface{}) error {
 	config := meta.(Config)
 
-	install := Install {
+	install := Install{
 		OperatingSystem: d.Get("server_class").(string),
 	}
 
-	productDetails := ProductDetails {
+	productDetails := ProductDetails{
 		Install: install,
 	}
 
-	orderRequest := OrderRequest {
-		ApiUuid: config.ApiUuid, 
-		ApiSecret: config.ApiSecret, 
-		Command: "order.create", 
-		CustomerId: config.CustomerId,
-		ProductCode: "SERVER_VIRTUAL_" + d.Get("server_class").(string) + "_" + d.Get("country").(string),
+	orderRequest := OrderRequest{
+		ApiUuid:        config.ApiUuid,
+		ApiSecret:      config.ApiSecret,
+		Command:        "order.create",
+		CustomerId:     config.CustomerId,
+		ProductCode:    "SERVER_VIRTUAL_" + d.Get("server_class").(string) + "_" + d.Get("country").(string),
 		ProductDetails: productDetails,
 	}
 
 	orderRequestJson, err := json.Marshal(orderRequest)
-    if err != nil {
-        panic(err)
-    }
+	if err != nil {
+		panic(err)
+	}
 
 	order, err := http.Post(config.ApiAddress, "application/json", bytes.NewBuffer(orderRequestJson))
 	if err != nil {
-        panic(err)
+		panic(err)
 	}
 
 	var orderResponse OrderResponse
 	decodeErr := json.NewDecoder(order.Body).Decode(&orderResponse)
-    if decodeErr != nil {
-        panic(decodeErr)
-    }
+	if decodeErr != nil {
+		panic(decodeErr)
+	}
 
 	defer order.Body.Close()
 
-	if (orderResponse.Code != "OK") { panic(orderResponse.Code) }
+	if orderResponse.Code != "OK" {
+		panic(orderResponse.Code)
+	}
 
 	confirmRequest := ConfirmRequest{
-		ApiUuid: config.ApiUuid, 
-		ApiSecret: config.ApiSecret, 
-		Command: "order.confirm", 
+		ApiUuid:    config.ApiUuid,
+		ApiSecret:  config.ApiSecret,
+		Command:    "order.confirm",
 		CustomerId: config.CustomerId,
-		OrderId: strconv.Itoa(orderResponse.OrderId),
+		OrderId:    strconv.Itoa(orderResponse.OrderId),
 	}
 
 	confirmRequestJson, err := json.Marshal(confirmRequest)
-    if err != nil {
-        panic(err)
-    }
+	if err != nil {
+		panic(err)
+	}
 
 	confirm, err := http.Post(config.ApiAddress, "application/json", bytes.NewBuffer(confirmRequestJson))
 	var confirmResponse ConfirmResponse
 	decodeErr = json.NewDecoder(confirm.Body).Decode(&confirmResponse)
-    if decodeErr != nil {
-        panic(decodeErr)
-    }
+	if decodeErr != nil {
+		panic(decodeErr)
+	}
 
-	if (confirmResponse.Code != "OK") { panic(fmt.Sprintf("%#v\n", confirmResponse)) }
+	if confirmResponse.Code != "OK" {
+		panic(fmt.Sprintf("%#v\n", confirmResponse))
+	}
 
 	// panic(fmt.Sprintf("%#v\n", confirmResponse))
 
@@ -108,11 +113,11 @@ func resourceRackcorpServerRead(d *schema.ResourceData, meta interface{}) error 
 }
 
 type OrderRequest struct {
-	ApiUuid string `json:"APIUUID"`
-	ApiSecret string `json:"APISECRET"`
-	Command string `json:"cmd"`
-	ProductCode string `json:"productCode"`
-	CustomerId string `json:"customerId"`
+	ApiUuid        string         `json:"APIUUID"`
+	ApiSecret      string         `json:"APISECRET"`
+	Command        string         `json:"cmd"`
+	ProductCode    string         `json:"productCode"`
+	CustomerId     string         `json:"customerId"`
 	ProductDetails ProductDetails `json:"productDetails"`
 }
 
@@ -125,19 +130,19 @@ type Install struct {
 }
 
 type OrderResponse struct {
-	Code string `json:"code"`
-	OrderId int `json:"orderId"`
+	Code    string `json:"code"`
+	OrderId int    `json:"orderId"`
 }
 
 type ConfirmRequest struct {
-	ApiUuid string `json:"APIUUID"`
-	ApiSecret string `json:"APISECRET"`
-	Command string `json:"cmd"`
-	OrderId string `json:"orderId"`
+	ApiUuid    string `json:"APIUUID"`
+	ApiSecret  string `json:"APISECRET"`
+	Command    string `json:"cmd"`
+	OrderId    string `json:"orderId"`
 	CustomerId string `json:"customerId"`
 }
 
 type ConfirmResponse struct {
-	Code string `json:"code"`
-	ContractId []int `json:"contractID"`
+	Code       string `json:"code"`
+	ContractId []int  `json:"contractID"`
 }

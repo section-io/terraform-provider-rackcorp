@@ -38,8 +38,8 @@ func Provider() terraform.ResourceProvider {
 
 func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	config := Config{
-		ApiUuid: d.Get("api_uuid").(string),
-		ApiSecret: d.Get("api_secret").(string),
+		ApiUuid:    d.Get("api_uuid").(string),
+		ApiSecret:  d.Get("api_secret").(string),
 		CustomerId: d.Get("customer_id").(string),
 		ApiAddress: "https://api.rackcorp.net/api/rest/v1/json.php",
 	}
@@ -48,8 +48,8 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 }
 
 type Config struct {
-	ApiUuid string
-	ApiSecret string
+	ApiUuid    string
+	ApiSecret  string
 	ApiAddress string
 	CustomerId string
 }
