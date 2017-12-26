@@ -4,11 +4,18 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"strconv"
 
 	"github.com/hashicorp/terraform/helper/schema"
 )
+
+func safeClose(c io.Closer, err *error) {
+	if cerr := c.Close(); cerr != nil && *err == nil {
+		*err = cerr
+	}
+}
 
 func resourceRackcorpServer() *schema.Resource {
 	return &schema.Resource{
@@ -35,7 +42,7 @@ func resourceRackcorpServer() *schema.Resource {
 	}
 }
 
-func resourceRackcorpServerCreate(d *schema.ResourceData, meta interface{}) error {
+func resourceRackcorpServerCreate(d *schema.ResourceData, meta interface{}) (outErr error) {
 	config := meta.(Config)
 
 	install := Install{
@@ -71,7 +78,7 @@ func resourceRackcorpServerCreate(d *schema.ResourceData, meta interface{}) erro
 		panic(decodeErr)
 	}
 
-	defer order.Body.Close()
+	defer safeClose(order.Body, &outErr)
 
 	if orderResponse.Code != "OK" {
 		panic(orderResponse.Code)
@@ -103,7 +110,7 @@ func resourceRackcorpServerCreate(d *schema.ResourceData, meta interface{}) erro
 
 	// panic(fmt.Sprintf("%#v\n", confirmResponse))
 
-	defer confirm.Body.Close()
+	defer safeClose(confirm.Body, &outErr)
 
 	return resourceRackcorpServerRead(d, meta)
 }
