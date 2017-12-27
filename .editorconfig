@@ -10,3 +10,8 @@ insert_final_newline = true
 [*.go]
 indent_style = tab
 indent_size = 8
+
+[*.tf]
+# https://github.com/hashicorp/hcl/issues/111
+indent_style = space
+indent_size = 2
