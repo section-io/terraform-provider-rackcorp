@@ -1,4 +1,4 @@
-FROM golang:1.9
+FROM golang:1.9 as build
 
 ENV CGO_ENABLED=0
 
@@ -8,7 +8,8 @@ RUN go get -u github.com/kisielk/errcheck
 
 # explicitly install dependencies to improve Docker re-build times
 RUN go get -v -d \
-  github.com/hashicorp/terraform
+  github.com/hashicorp/terraform \
+  github.com/pkg/errors
 
 RUN mkdir -p /go/src/github.com/section-io/ && \
   ln -s /go/src/app /go/src/github.com/section-io/terraform-provider-rackcorp
@@ -24,3 +25,25 @@ RUN go-wrapper install
 
 RUN cd "/go/src/$(go list -e -f '{{.ImportComment}}')" && \
   go test -bench=. -v ./...
+
+### END FROM build
+
+FROM hashicorp/terraform:0.11.1
+
+RUN mkdir -p /work/ && \
+  printf 'providers {\n  rackcorp = "/go/bin/terraform-provider-rackcorp"\n}\n' >/root/.terraformrc
+
+WORKDIR /work
+
+COPY --from=build /go/bin/terraform-provider-rackcorp /go/bin/
+
+COPY example.tf ./main.tf
+
+# https://www.terraform.io/docs/internals/debugging.html
+ARG TF_LOG=WARN
+
+RUN terraform init
+
+RUN terraform plan -out=a.tfplan
+
+RUN terraform apply a.tfplan

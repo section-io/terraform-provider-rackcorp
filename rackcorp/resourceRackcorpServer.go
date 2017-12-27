@@ -9,6 +9,7 @@ import (
 	"strconv"
 
 	"github.com/hashicorp/terraform/helper/schema"
+	"github.com/pkg/errors"
 )
 
 func safeClose(c io.Closer, err *error) {
@@ -71,6 +72,7 @@ func resourceRackcorpServerCreate(d *schema.ResourceData, meta interface{}) (out
 	if err != nil {
 		panic(err)
 	}
+	defer safeClose(order.Body, &outErr)
 
 	var orderResponse OrderResponse
 	decodeErr := json.NewDecoder(order.Body).Decode(&orderResponse)
@@ -78,10 +80,8 @@ func resourceRackcorpServerCreate(d *schema.ResourceData, meta interface{}) (out
 		panic(decodeErr)
 	}
 
-	defer safeClose(order.Body, &outErr)
-
 	if orderResponse.Code != "OK" {
-		panic(orderResponse.Code)
+		return errors.Errorf("Unexpected Rackcorp server order response code '%s'.", orderResponse.Code)
 	}
 
 	confirmRequest := ConfirmRequest{
@@ -98,6 +98,12 @@ func resourceRackcorpServerCreate(d *schema.ResourceData, meta interface{}) (out
 	}
 
 	confirm, err := http.Post(config.ApiAddress, "application/json", bytes.NewBuffer(confirmRequestJson))
+	if err != nil {
+		return errors.Wrapf(err, "Failed to confirm Rackcorp server order '%d'.", orderResponse.OrderId)
+	}
+
+	defer safeClose(confirm.Body, &outErr)
+
 	var confirmResponse ConfirmResponse
 	decodeErr = json.NewDecoder(confirm.Body).Decode(&confirmResponse)
 	if decodeErr != nil {
@@ -109,8 +115,6 @@ func resourceRackcorpServerCreate(d *schema.ResourceData, meta interface{}) (out
 	}
 
 	// panic(fmt.Sprintf("%#v\n", confirmResponse))
-
-	defer safeClose(confirm.Body, &outErr)
 
 	return resourceRackcorpServerRead(d, meta)
 }
