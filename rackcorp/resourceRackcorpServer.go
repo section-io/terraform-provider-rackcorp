@@ -57,6 +57,10 @@ func resourceRackcorpServer() *schema.Resource {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
+			"contract_status": {
+				Type:     schema.TypeString,
+				Computed: true,
+			},
 		},
 	}
 }
@@ -79,10 +83,11 @@ func getDeviceByContract(contractId string, d *schema.ResourceData, meta interfa
 	}
 
 	panicOnError(d.Set("contract_id", contractGetResponse.Contract.ContractId))
+	panicOnError(d.Set("contract_status", contractGetResponse.Contract.Status))
 
 	if contractGetResponse.Contract.Status == RackcorpApiOrderContractStatusPending {
 		log.Printf("[WARN] Rackcorp contract '%s' is pending.", contractId)
-		_, err := waitForContractAttribute(d, "ACTIVE", []string{"", "PENDING"}, "status", meta)
+		_, err := waitForContractAttribute(d, "ACTIVE", []string{""}, "contract_status", meta)
 
 		if err != nil {
 			return errors.Wrapf(err, "Error waiting for Rackcorp contract status to be ACTIVE '%s'.", err)
@@ -188,7 +193,6 @@ func resourceRackcorpServerRead(d *schema.ResourceData, meta interface{}) error 
 	if orderId == "" {
 		return errors.Errorf("Missing resource id.")
 	}
-	//jason
 
 	config := meta.(Config)
 
