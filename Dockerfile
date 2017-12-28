@@ -9,7 +9,8 @@ RUN go get -u github.com/kisielk/errcheck
 # explicitly install dependencies to improve Docker re-build times
 RUN go get -v \
   github.com/hashicorp/terraform \
-  github.com/pkg/errors
+  github.com/pkg/errors \
+  gopkg.in/h2non/gock.v1
 
 RUN mkdir -p /go/src/github.com/section-io/ && \
   ln -s /go/src/app /go/src/github.com/section-io/terraform-provider-rackcorp
