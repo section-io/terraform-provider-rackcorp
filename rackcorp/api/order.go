@@ -1,8 +1,6 @@
 package api
 
 import (
-	"encoding/json"
-
 	"github.com/pkg/errors"
 )
 
@@ -33,20 +31,10 @@ func (c *client) OrderGet(orderId string) (*Order, error) {
 		OrderId: orderId,
 	}
 
-	reqBody, err := json.Marshal(req)
-	if err != nil {
-		return nil, errors.Wrapf(err, "Failed to JSON encode request: %v", req)
-	}
-
-	respBody, err := c.httpPost(reqBody) // TODO c.httpPostJson(req, &resp)
-	if err != nil {
-		return nil, errors.Wrapf(err, "Failed to HTTP POST request: %v", req)
-	}
-
 	var resp orderGetResponse
-	err = json.Unmarshal(respBody, &resp)
+	err := c.httpPostJson(req, &resp)
 	if err != nil {
-		return nil, errors.Wrapf(err, "Could not JSON decode response: %s", respBody)
+		return nil, errors.Wrapf(err, "OrderGet request failed for order Id '%s'.", orderId)
 	}
 
 	if resp.Code != "OK" || resp.Order == nil {

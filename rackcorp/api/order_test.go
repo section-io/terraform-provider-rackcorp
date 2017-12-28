@@ -1,9 +1,9 @@
 package api
 
 import (
-	"log"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"gopkg.in/h2non/gock.v1"
 )
 
@@ -21,13 +21,15 @@ func TestOrderGet(t *testing.T) {
 	secret := "dummy-secret"
 	orderId := "123"
 	client, err := NewClient(uuid, secret)
-	if err != nil {
-		t.Error(err)
-	}
-	order, err := client.OrderGet(orderId)
-	log.Printf("order:%#v, err:%#v\n", order, err)
+	assert.Nil(t, err, "NewClient error")
 
-	if !gock.IsDone() {
-		t.Error("gock not done")
-	}
+	order, err := client.OrderGet(orderId)
+	assert.Nil(t, err, "OrderGet error")
+
+	assert.Equal(t, "123", order.OrderId, "OrderId")
+	assert.Equal(t, "456", order.CustomerId, "CustomerId")
+	assert.Equal(t, "789", order.ContractId, "ContractId")
+	assert.Equal(t, "ACCEPTED", order.Status, "Status")
+
+	assert.True(t, gock.IsDone(), "gock.IsDone")
 }
