@@ -1,9 +1,12 @@
 package rackcorp
 
 import (
+	"fmt"
 	"log"
 	"strconv"
+	"time"
 
+	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/pkg/errors"
 )
@@ -50,11 +53,17 @@ func resourceRackcorpServer() *schema.Resource {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
+			"contract_id": {
+				Type:     schema.TypeString,
+				Computed: true,
+			},
 		},
 	}
 }
 
-func getDeviceByContract(contractId string, d *schema.ResourceData, config Config) error {
+func getDeviceByContract(contractId string, d *schema.ResourceData, meta interface{}) error {
+	config := meta.(Config)
+
 	contractGetRequest := NewOrderContractGetRequest(contractId)
 	contractGetResponse, err := contractGetRequest.Post(config)
 	if err != nil {
@@ -69,8 +78,16 @@ func getDeviceByContract(contractId string, d *schema.ResourceData, config Confi
 		return nil
 	}
 
+	panicOnError(d.Set("contract_id", contractGetResponse.Contract.ContractId))
+
 	if contractGetResponse.Contract.Status == RackcorpApiOrderContractStatusPending {
 		log.Printf("[WARN] Rackcorp contract '%s' is pending.", contractId)
+		_, err := waitForContractAttribute(d, "ACTIVE", []string{"", "PENDING"}, "status", meta)
+
+		if err != nil {
+			return errors.Wrapf(err, "Error waiting for Rackcorp contract status to be ACTIVE '%s'.", err)
+		}
+
 		return nil
 		// TODO implement waiting with retry, eg:
 		//  https://github.com/terraform-providers/terraform-provider-digitalocean/blob/master/digitalocean/resource_digitalocean_droplet.go#L562
@@ -152,6 +169,8 @@ func resourceRackcorpServerCreate(d *schema.ResourceData, meta interface{}) erro
 
 	contractId := strconv.Itoa(confirmResponse.ContractIds[0])
 
+	panicOnError(d.Set("contract_id", contractId))
+
 	d.SetId(orderId)
 
 	return getDeviceByContract(contractId, d, config)
@@ -169,6 +188,7 @@ func resourceRackcorpServerRead(d *schema.ResourceData, meta interface{}) error 
 	if orderId == "" {
 		return errors.Errorf("Missing resource id.")
 	}
+	//jason
 
 	config := meta.(Config)
 
@@ -184,10 +204,62 @@ func resourceRackcorpServerRead(d *schema.ResourceData, meta interface{}) error 
 		d.SetId("")
 		return nil
 	}
+	panicOnError(d.Set("contract_id", contractId))
 
 	return getDeviceByContract(contractId, d, config)
 }
 
 func resourceRackcorpServerDelete(d *schema.ResourceData, meta interface{}) error {
 	return nil
+}
+
+func waitForContractAttribute(
+	d *schema.ResourceData, target string, pending []string, attribute string, meta interface{}) (interface{}, error) {
+	// Wait for the contract so we can get the device attributes
+	// that show up after a while
+	log.Printf(
+		"[INFO] Waiting for contract (%s) to have %s of %s",
+		d.Get("contract_id").(string), attribute, target)
+
+	stateConf := &resource.StateChangeConf{
+		Pending:    pending,
+		Target:     []string{target},
+		Refresh:    newContractStateRefreshFunc(d, attribute, meta),
+		Timeout:    60 * time.Minute,
+		Delay:      10 * time.Second,
+		MinTimeout: 3 * time.Second,
+	}
+
+	return stateConf.WaitForState()
+}
+
+func newContractStateRefreshFunc(
+	d *schema.ResourceData, attribute string, meta interface{}) resource.StateRefreshFunc {
+
+	config := meta.(Config)
+	return func() (interface{}, string, error) {
+		err := resourceRackcorpServerRead(d, meta)
+		if err != nil {
+			return nil, "", err
+		}
+
+		contract_id := d.Get("contract_id").(string)
+		if contract_id == "" {
+			return nil, "", fmt.Errorf("contract_id not available")
+		}
+
+		// See if we can access our attribute
+		if attr, ok := d.GetOk(attribute); ok {
+			// Retrieve the contract properties
+			contractGetRequest := NewOrderContractGetRequest(contract_id)
+			contractGetResponse, err := contractGetRequest.Post(config)
+			if err != nil {
+				return nil, "", fmt.Errorf("Error retrieving contract: %s", err)
+			}
+
+			return &contractGetResponse, attr.(string), nil
+		}
+
+		return nil, "", nil
+	}
 }
