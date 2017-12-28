@@ -29,6 +29,7 @@ type client struct {
 }
 
 type Client interface {
+	OrderCreate(productCode string, customerId string, productDetails ProductDetails) (*CreatedOrder, error)
 	OrderGet(orderId string) (*Order, error)
 }
 
