@@ -2,6 +2,7 @@ package api
 
 import (
 	"bytes"
+	"encoding/json"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -83,4 +84,24 @@ func (c client) httpPost(requestBody []byte) (responseBody []byte, outErr error)
 	}
 
 	return body, nil
+}
+
+func (c client) httpPostJson(req interface{}, resp interface{}) error {
+
+	reqBody, err := json.Marshal(req)
+	if err != nil {
+		return errors.Wrapf(err, "Failed to JSON encode request: %v", req)
+	}
+
+	respBody, err := c.httpPost(reqBody)
+	if err != nil {
+		return errors.Wrapf(err, "Failed to HTTP POST request: %v", req)
+	}
+
+	err = json.Unmarshal(respBody, &resp)
+	if err != nil {
+		return errors.Wrapf(err, "Could not JSON decode response: %s", respBody)
+	}
+
+	return nil
 }
