@@ -29,6 +29,11 @@ func resourceRackcorpServer() *schema.Resource {
 				Required: true,
 				ForceNew: true,
 			},
+			"cpu_count": {
+				Type:     schema.TypeInt,
+				Required: true,
+				ForceNew: true,
+			},
 			"device_id": {
 				Type:     schema.TypeString,
 				Computed: true,
@@ -108,7 +113,8 @@ func resourceRackcorpServerCreate(d *schema.ResourceData, meta interface{}) erro
 	}
 
 	productDetails := ProductDetails{
-		Install: install,
+		Install:  install,
+		CpuCount: d.Get("cpu_count").(int),
 	}
 
 	orderRequest := NewOrderCreateRequest()

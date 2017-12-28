@@ -142,7 +142,8 @@ func NewOrderCreateRequest() *OrderCreateRequest {
 }
 
 type ProductDetails struct {
-	Install Install `json:"install"`
+	Install  Install `json:"install"`
+	CpuCount int     `json:"cpu"`
 }
 
 type Install struct {
