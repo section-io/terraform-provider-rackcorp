@@ -15,6 +15,27 @@ func getClient(t *testing.T) Client {
 	return client
 }
 
+func TestOrderConfirm(t *testing.T) {
+	defer gock.Off()
+
+	const orderId = "432"
+	const responseBody = `{"contractID":[543],"code":"OK","message":"Order confirmed"}`
+
+	client := getClient(t)
+
+	gock.New("https://api.rackcorp.net").
+		Post("/api/rest/v1/json.php").
+		Reply(200).
+		BodyString(responseBody)
+
+	order, err := client.OrderConfirm(orderId)
+	assert.Nil(t, err, "OrderConfirm error")
+
+	assert.Contains(t, order.ContractIds, "543", "ContractIds")
+
+	assert.True(t, gock.IsDone(), "gock.IsDone")
+}
+
 func TestOrderCreate(t *testing.T) {
 	defer gock.Off()
 

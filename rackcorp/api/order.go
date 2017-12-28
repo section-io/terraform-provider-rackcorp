@@ -22,9 +22,23 @@ type Order struct {
 	ContractId string `json:"contractId"`
 }
 
+type ConfirmedOrder struct {
+	ContractIds []string
+}
+
 type CreatedOrder struct {
 	OrderId    string
 	ChangeText string
+}
+
+type orderConfirmRequest struct {
+	request
+	OrderId string `json:"orderId"`
+}
+
+type orderConfirmResponse struct {
+	response
+	ContractIds []int `json:"contractID"`
 }
 
 type orderCreateRequest struct {
@@ -49,6 +63,39 @@ type orderGetRequest struct {
 type orderGetResponse struct {
 	response
 	Order *Order `json:"order"`
+}
+
+func sliceItoa(i []int) []string {
+	a := make([]string, len(i))
+	for index, value := range i {
+		a[index] = strconv.Itoa(value)
+	}
+	return a
+}
+
+func (c *client) OrderConfirm(orderId string) (*ConfirmedOrder, error) {
+	if orderId == "" {
+		return nil, errors.New("orderId parameter is required.")
+	}
+
+	req := &orderConfirmRequest{
+		request: c.newRequest("order.confirm"),
+		OrderId: orderId,
+	}
+
+	var resp orderConfirmResponse
+	err := c.httpPostJson(req, &resp)
+	if err != nil {
+		return nil, errors.Wrap(err, "OrderConfirm request failed.")
+	}
+
+	if resp.Code != "OK" || len(resp.ContractIds) == 0 {
+		return nil, newApiError(resp.response, nil)
+	}
+
+	return &ConfirmedOrder{
+		ContractIds: sliceItoa(resp.ContractIds),
+	}, nil
 }
 
 func (c *client) OrderCreate(productCode string, customerId string, productDetails ProductDetails) (*CreatedOrder, error) {
