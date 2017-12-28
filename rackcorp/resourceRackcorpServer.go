@@ -120,7 +120,7 @@ func getDeviceByContract(contractId string, d *schema.ResourceData, meta interfa
 
 	log.Printf("[DEBUG] Rackcorp device: %#v", device)
 
-	panicOnError(d.Set("device_id", device.Name))
+	panicOnError(d.Set("device_id", device.DeviceId))
 	panicOnError(d.Set("name", device.Name))
 	panicOnError(d.Set("primary_ip", device.PrimaryIP))
 
