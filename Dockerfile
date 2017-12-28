@@ -7,7 +7,7 @@ WORKDIR /go/src/app
 RUN go get -u github.com/kisielk/errcheck
 
 # explicitly install dependencies to improve Docker re-build times
-RUN go get -v -d \
+RUN go get -v \
   github.com/hashicorp/terraform \
   github.com/pkg/errors
 
