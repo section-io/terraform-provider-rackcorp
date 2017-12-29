@@ -36,6 +36,11 @@ func resourceRackcorpServer() *schema.Resource {
 				Required: true,
 				ForceNew: true,
 			},
+			"root_password": {
+				Type:     schema.TypeString,
+				Required: true,
+				ForceNew: true,
+			},
 			"device_id": {
 				Type:     schema.TypeString,
 				Computed: true,
@@ -170,13 +175,18 @@ func cancelServer(deviceId string, config Config) error {
 func resourceRackcorpServerCreate(d *schema.ResourceData, meta interface{}) error {
 	config := meta.(Config)
 
+	credentials := api.Credentials{
+		RootPassword: d.Get("root_password").(string),
+	}
+
 	install := api.Install{
 		OperatingSystem: d.Get("operating_system").(string),
 	}
 
 	productDetails := api.ProductDetails{
-		Install:  install,
-		CpuCount: d.Get("cpu_count").(int),
+		Credentials: credentials,
+		Install:     install,
+		CpuCount:    d.Get("cpu_count").(int),
 	}
 
 	productCode := "SERVER_VIRTUAL_" + d.Get("server_class").(string) + "_" + d.Get("country").(string)

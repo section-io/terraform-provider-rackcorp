@@ -7,12 +7,17 @@ import (
 )
 
 type ProductDetails struct {
-	Install  Install `json:"install"`
-	CpuCount int     `json:"cpu"`
+	Credentials Credentials `json:"credentials"`
+	Install     Install     `json:"install"`
+	CpuCount    int         `json:"cpu"`
 }
 
 type Install struct {
 	OperatingSystem string `json:"operatingSystem"`
+}
+
+type Credentials struct {
+	RootPassword string `json:"password"`
 }
 
 type Order struct {
