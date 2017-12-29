@@ -68,55 +68,54 @@ func resourceRackcorpServer() *schema.Resource {
 	}
 }
 
-func getDeviceByContract(contractId string, d *schema.ResourceData, meta interface{}) error {
-	config := meta.(Config)
+func resourceRackcorpServerPopulateFromDevice(d *schema.ResourceData, config Config) error {
+	deviceId := d.Get("device_id").(string)
+	log.Printf("[TRACE] Rackcorp device id '%s'", deviceId)
 
-	panicOnError(d.Set("contract_id", contractId))
-
-	contract, err := waitForContractStatus(contractId, "ACTIVE", []string{"PENDING"}, config.Client)
-
-	if err != nil {
-		return errors.Wrapf(err, "Error waiting for Rackcorp contract status to be ACTIVE '%s'.", err)
-	}
-
-	panicOnError(d.Set("contract_status", contract.Status))
-
-	deviceId := contract.DeviceId
 	if deviceId == "" {
-		log.Printf("[WARN] Rackcorp contract '%s' device ID not specified.", contractId)
-		d.SetId("")
 		return nil
 	}
 
 	device, err := config.Client.DeviceGet(deviceId)
 	if err != nil {
-		return errors.Wrapf(err, "Error retrieving Rackcorp device '%s'.", deviceId)
-	}
-
-	if device.DeviceId == "" {
-		log.Printf("[WARN] Rackcorp device '%s' not found.", deviceId)
-		d.SetId("")
-		return nil
-	}
-
-	sysPowerSwitch := getExtraByKey("SYS_POWERSWITCH", device.Extra)
-	sysPowerStatus := getExtraByKey("SYS_POWERSTATUS", device.Extra)
-
-	if sysPowerSwitch == "ONLINE" && sysPowerStatus == "ONLINE" {
-		panicOnError(d.Set("device_status", "ONLINE"))
-	}
-
-	_, err = waitForDeviceAttribute(d, "ONLINE", []string{""}, "device_status", meta)
-
-	if err != nil {
-		return errors.Wrapf(err, "Error waiting for Rackcorp device status to be ONLINE '%s'.", err)
+		return errors.Wrapf(err, "Could not get Rackcorp device with id '%s'.", deviceId)
 	}
 
 	log.Printf("[DEBUG] Rackcorp device: %#v", device)
 
-	panicOnError(d.Set("device_id", device.DeviceId))
 	panicOnError(d.Set("name", device.Name))
 	panicOnError(d.Set("primary_ip", device.PrimaryIP))
+
+	powerSwitch := getExtraByKey("SYS_POWERSWITCH", device.Extra)
+	if powerSwitch == "ONLINE" {
+		powerStatus := getExtraByKey("SYS_POWERSTATUS", device.Extra)
+		log.Printf("[TRACE] Rackcorp device power status: %s", powerStatus)
+		panicOnError(d.Set("device_status", powerStatus))
+	} else {
+		log.Printf("[TRACE] Rackcorp device power switch: %s", powerSwitch)
+		panicOnError(d.Set("device_status", powerSwitch))
+	}
+
+	return nil
+}
+
+func resourceRackcorpServerPopulateFromContract(d *schema.ResourceData, config Config) error {
+	contractId := d.Get("contract_id").(string)
+	log.Printf("[TRACE] Rackcorp contract id '%s'", contractId)
+
+	if contractId == "" {
+		return nil
+	}
+
+	contract, err := config.Client.OrderContractGet(contractId)
+	if err != nil {
+		return errors.Wrapf(err, "Could not get Rackcorp contract with id '%s'.", contractId)
+	}
+
+	log.Printf("[DEBUG] Rackcorp contract: %#v", contract)
+
+	panicOnError(d.Set("contract_status", contract.Status))
+	panicOnError(d.Set("device_id", contract.DeviceId))
 
 	return nil
 }
@@ -161,6 +160,8 @@ func resourceRackcorpServerCreate(d *schema.ResourceData, meta interface{}) erro
 		return errors.Wrapf(err, "Failed to confirm Rackcorp server order '%s'.", orderId)
 	}
 
+	d.SetId(orderId)
+
 	contractCount := len(confirmedOrder.ContractIds)
 	if contractCount != 1 {
 		return errors.Errorf("Expected one Rackcorp contract for order '%s' but received %d", orderId, contractCount)
@@ -170,9 +171,17 @@ func resourceRackcorpServerCreate(d *schema.ResourceData, meta interface{}) erro
 
 	panicOnError(d.Set("contract_id", contractId))
 
-	d.SetId(orderId)
+	err = waitForContractStatus(d, config, "ACTIVE", []string{"PENDING"})
+	if err != nil {
+		return errors.Wrapf(err, "Error waiting for Rackcorp contract status to be ACTIVE '%s'.", err)
+	}
 
-	return getDeviceByContract(contractId, d, config)
+	err = waitForDeviceAttribute(d, config, "device_status", "ONLINE", []string{"OFFLINE"})
+	if err != nil {
+		return errors.Wrapf(err, "Error waiting for Rackcorp device status to be ONLINE '%s'.", err)
+	}
+
+	return nil
 }
 
 func panicOnError(err error) {
@@ -203,77 +212,83 @@ func resourceRackcorpServerRead(d *schema.ResourceData, meta interface{}) error 
 	}
 	panicOnError(d.Set("contract_id", contractId))
 
-	return getDeviceByContract(contractId, d, config)
+	err = resourceRackcorpServerPopulateFromContract(d, config)
+	if err != nil {
+		return err
+	}
+
+	return resourceRackcorpServerPopulateFromDevice(d, config)
 }
 
 func resourceRackcorpServerDelete(d *schema.ResourceData, meta interface{}) error {
 	return nil
 }
 
-func waitForContractStatus(contractId string, targetStatus string, pendingStatuses []string, client api.Client) (*api.OrderContract, error) {
+func waitForContractStatus(d *schema.ResourceData, config Config, targetStatus string, pendingStatuses []string) error {
 	log.Printf(
-		"[INFO] Waiting for contract (%s) to have Status of %s",
-		contractId, targetStatus)
+		"[INFO] Waiting for contract to have Status of %s",
+		targetStatus)
 
 	stateConf := &resource.StateChangeConf{
 		Pending:    pendingStatuses,
 		Target:     []string{targetStatus},
-		Refresh:    newContractStateRefreshFunc(contractId, client),
+		Refresh:    newContractStatusRefreshFunc(d, config),
 		Timeout:    60 * time.Minute,
 		Delay:      10 * time.Second,
 		MinTimeout: 3 * time.Second,
 	}
 
-	result, err := stateConf.WaitForState()
-	if err != nil {
-		return nil, err
-	}
-	contract := result.(*api.OrderContract)
-	return contract, nil
+	_, err := stateConf.WaitForState()
+	return err
 }
 
-func newContractStateRefreshFunc(contractId string, client api.Client) resource.StateRefreshFunc {
+func newContractStatusRefreshFunc(d *schema.ResourceData, config Config) resource.StateRefreshFunc {
 	return func() (interface{}, string, error) {
-		contract, err := client.OrderContractGet(contractId)
+		err := resourceRackcorpServerPopulateFromContract(d, config)
 		if err != nil {
-			return nil, "", errors.Errorf("Error retrieving contract: %v", err)
+			return nil, "", err
 		}
 
-		return contract, contract.Status, nil
+		if status, ok := d.GetOk("contract_status"); ok {
+			return d, status.(string), nil
+		}
+
+		return d, "", nil
 	}
 }
 
 func waitForDeviceAttribute(
-	d *schema.ResourceData, target string, pending []string, attribute string, meta interface{}) (interface{}, error) {
-	// Wait for the contract so we can get the device attributes
-	// that show up after a while
+	d *schema.ResourceData, config Config, attribute string, target string, pending []string) error {
 
-	deviceId := d.Get("device_id").(string)
 	log.Printf(
-		"[INFO] Waiting for device (%s) to have %s of %s",
-		deviceId, attribute, target)
+		"[INFO] Waiting for device to have %s of %s",
+		attribute, target)
 
 	stateConf := &resource.StateChangeConf{
 		Pending:    pending,
 		Target:     []string{target},
-		Refresh:    newDeviceStateRefreshFunc(deviceId, meta.(Config).Client),
+		Refresh:    newDeviceStateRefreshFunc(d, config, attribute),
 		Timeout:    60 * time.Minute,
 		Delay:      10 * time.Second,
 		MinTimeout: 3 * time.Second,
 	}
 
-	return stateConf.WaitForState()
+	_, err := stateConf.WaitForState()
+	return err
 }
 
-func newDeviceStateRefreshFunc(deviceId string, client api.Client) resource.StateRefreshFunc {
-
+func newDeviceStateRefreshFunc(d *schema.ResourceData, config Config, attribute string) resource.StateRefreshFunc {
 	return func() (interface{}, string, error) {
 
-		device, err := client.DeviceGet(deviceId)
+		err := resourceRackcorpServerPopulateFromDevice(d, config)
 		if err != nil {
-			return nil, "", errors.Wrapf(err, "Error retrieving device id '%s'", deviceId)
+			return nil, "", err
 		}
 
-		return device, device.Status, nil
+		if status, ok := d.GetOk(attribute); ok {
+			return d, status.(string), nil
+		}
+
+		return d, "", nil
 	}
 }
