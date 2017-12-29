@@ -151,6 +151,22 @@ func startServer(deviceId string, config Config) error {
 	return nil
 }
 
+func cancelServer(deviceId string, config Config) error {
+	transaction, err := config.Client.TransactionCreate(
+		api.TransactionTypeCancel,
+		api.TransactionObjectTypeDevice,
+		deviceId)
+
+	if err != nil {
+		return errors.Wrapf(err, "Failed to cancel server with device id '%s'.", deviceId)
+	}
+
+	log.Printf("[TRACE] Created transaction '%d' to cancel server with device id '%s'.",
+		transaction.TransactionId, deviceId)
+
+	return nil
+}
+
 func resourceRackcorpServerCreate(d *schema.ResourceData, meta interface{}) error {
 	config := meta.(Config)
 
@@ -245,6 +261,12 @@ func resourceRackcorpServerRead(d *schema.ResourceData, meta interface{}) error 
 }
 
 func resourceRackcorpServerDelete(d *schema.ResourceData, meta interface{}) error {
+	config := meta.(Config)
+	deviceId := d.Get("device_id").(string)
+	err := cancelServer(deviceId, config)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
