@@ -135,6 +135,22 @@ func getExtraByKey(key string, extras []api.DeviceExtra) string {
 	return ""
 }
 
+func startServer(deviceId string, config Config) error {
+	transaction, err := config.Client.TransactionCreate(
+		api.TransactionTypeStartup,
+		api.TransactionObjectTypeDevice,
+		deviceId)
+
+	if err != nil {
+		return errors.Wrapf(err, "Failed to start server with device id '%s'.", deviceId)
+	}
+
+	log.Printf("[TRACE] Created transaction '%d' to start server with device id '%s'.",
+		transaction.TransactionId, deviceId)
+
+	return nil
+}
+
 func resourceRackcorpServerCreate(d *schema.ResourceData, meta interface{}) error {
 	config := meta.(Config)
 
@@ -176,10 +192,18 @@ func resourceRackcorpServerCreate(d *schema.ResourceData, meta interface{}) erro
 		return errors.Wrapf(err, "Error waiting for Rackcorp contract status to be ACTIVE '%s'.", err)
 	}
 
+	deviceId := d.Get("device_id").(string)
+	err = startServer(deviceId, config)
+	if err != nil {
+		return err
+	}
+
 	err = waitForDeviceAttribute(d, config, "device_status", "ONLINE", []string{"OFFLINE"})
 	if err != nil {
 		return errors.Wrapf(err, "Error waiting for Rackcorp device status to be ONLINE '%s'.", err)
 	}
+
+	// TODO wait for all pending transactions for device to complete
 
 	return nil
 }
