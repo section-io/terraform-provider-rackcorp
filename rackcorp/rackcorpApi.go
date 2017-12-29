@@ -87,9 +87,15 @@ type RackcorpApiDevice struct {
 	CustomerId string `json:"customerId"`
 	PrimaryIP  string `json:"primaryIP"`
 	Status     string `json:"status"`
+	Extra	   []RackcorpApiDeviceExtra `json:"extra"`      
 	// TODO assets, stdName, dateCreated, dateModified, dcDescription,
 	//  dcId, cName, extra, firewallPolicies, ips, networkRoutes, ports,
 	//  trafficCurrent, trafficEstimated, trafficMB, trafficShared
+}
+
+type RackcorpApiDeviceExtra struct {
+	Key  string `json:"key"`
+	Value interface{} `json:"value"`
 }
 
 type DeviceGetResponse struct {

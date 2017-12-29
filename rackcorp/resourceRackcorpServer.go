@@ -61,6 +61,10 @@ func resourceRackcorpServer() *schema.Resource {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
+			"device_status": {
+				Type:     schema.TypeString,
+				Computed: true,
+			},
 		},
 	}
 }
@@ -118,6 +122,19 @@ func getDeviceByContract(contractId string, d *schema.ResourceData, meta interfa
 		return nil
 	}
 
+	sysPowerSwitch, err := GetExtraByKey("SYS_POWERSWITCH", device.Extra)
+	sysPowerStatus, err := GetExtraByKey("SYS_POWERSTATUS", device.Extra)
+
+	if sysPowerSwitch.Value == "ONLINE" && sysPowerStatus.Value == "ONLINE" {
+		panicOnError(d.Set("device_status", "ONLINE"))
+	}
+
+	_, err = waitForDeviceAttribute(d, "ONLINE", []string{""}, "device_status", meta)
+
+	if err != nil {
+		return errors.Wrapf(err, "Error waiting for Rackcorp device status to be ONLINE '%s'.", err)
+	}
+
 	log.Printf("[DEBUG] Rackcorp device: %#v", device)
 
 	panicOnError(d.Set("device_id", device.DeviceId))
@@ -125,6 +142,15 @@ func getDeviceByContract(contractId string, d *schema.ResourceData, meta interfa
 	panicOnError(d.Set("primary_ip", device.PrimaryIP))
 
 	return nil
+}
+
+func GetExtraByKey(key string, extras []RackcorpApiDeviceExtra) (RackcorpApiDeviceExtra, error) {
+	for i := range extras {
+	    if extras[i].Key == key {
+	        return extras[i], nil
+	    }
+	}
+	return RackcorpApiDeviceExtra{}, errors.New("Key not found")
 }
 
 func resourceRackcorpServerCreate(d *schema.ResourceData, meta interface{}) error {
@@ -246,6 +272,57 @@ func newContractStateRefreshFunc(
 			}
 
 			return &contractGetResponse, attr.(string), nil
+		}
+
+		return nil, "", nil
+	}
+}
+
+func waitForDeviceAttribute(
+	d *schema.ResourceData, target string, pending []string, attribute string, meta interface{}) (interface{}, error) {
+	// Wait for the contract so we can get the device attributes
+	// that show up after a while
+	log.Printf(
+		"[INFO] Waiting for device (%s) to have %s of %s",
+		d.Get("device_id").(string), attribute, target)
+
+	stateConf := &resource.StateChangeConf{
+		Pending:    pending,
+		Target:     []string{target},
+		Refresh:    newDeviceStateRefreshFunc(d, attribute, meta),
+		Timeout:    60 * time.Minute,
+		Delay:      10 * time.Second,
+		MinTimeout: 3 * time.Second,
+	}
+
+	return stateConf.WaitForState()
+}
+
+func newDeviceStateRefreshFunc(
+	d *schema.ResourceData, attribute string, meta interface{}) resource.StateRefreshFunc {
+
+	config := meta.(Config)
+	return func() (interface{}, string, error) {
+		err := resourceRackcorpServerRead(d, meta)
+		if err != nil {
+			return nil, "", err
+		}
+
+		device_id := d.Get("device_id").(string)
+		if device_id == "" {
+			return nil, "", fmt.Errorf("device_id not available")
+		}
+
+		// See if we can access our attribute
+		if attr, ok := d.GetOk(attribute); ok {
+			// Retrieve the contract properties
+			deviceGetRequest := NewDeviceGetRequest(device_id)
+			deviceGetResponse, err := deviceGetRequest.Post(config)
+			if err != nil {
+				return nil, "", fmt.Errorf("Error retrieving device: %s", err)
+			}
+
+			return &deviceGetResponse, attr.(string), nil
 		}
 
 		return nil, "", nil
