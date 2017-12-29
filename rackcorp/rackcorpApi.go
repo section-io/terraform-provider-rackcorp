@@ -15,16 +15,13 @@ const (
 	RackcorpApiResponseCodeAccessDenied = "ACCESS_DENIED"
 	RackcorpApiResponseCodeFault        = "FAULT"
 
-	RackcorpApiDeviceGetCommand        = "device.get"
-	RackcorpApiOrderContractGetCommand = "order.contract.get"
+	RackcorpApiDeviceGetCommand = "device.get"
 
 	RackcorpApiOrderStatusPending  = "PENDING"
 	RackcorpApiOrderStatusAccepted = "ACCEPTED"
 
 	RackcorpApiOrderContractStatusActive  = "ACTIVE"
 	RackcorpApiOrderContractStatusPending = "PENDING"
-
-	RackcorpApiOrderContractTypeVirtualServer = "VIRTUALSERVER"
 )
 
 type RackcorpApiRequest struct {
@@ -36,35 +33,6 @@ type RackcorpApiRequest struct {
 type RackcorpApiResponse struct {
 	Code    string `json:"code"`
 	Message string `json:"message"`
-}
-
-type OrderContractGetRequest struct {
-	RackcorpApiRequest
-	ContractId string `json:"contractId"`
-}
-
-func NewOrderContractGetRequest(contractId string) *OrderContractGetRequest {
-	return &OrderContractGetRequest{
-		RackcorpApiRequest: RackcorpApiRequest{
-			Command: RackcorpApiOrderContractGetCommand,
-		},
-		ContractId: contractId,
-	}
-}
-
-type RackcorpApiContract struct {
-	ContractId string `json:"contractId"`
-	CustomerId string `json:"customerId"`
-	DeviceId   string `json:"deviceID"`
-	Status     string `json:"status"`
-	Type       string `json:"type"`
-	// TODO contractInfo, created, currency, lastBilled, modified, notes, referenceID, serviceBillId
-
-}
-
-type OrderContractGetResponse struct {
-	RackcorpApiResponse
-	Contract RackcorpApiContract `json:"contract"`
 }
 
 type DeviceGetRequest struct {
@@ -128,28 +96,6 @@ func postRackcorpApiRequest(requestBody []byte, config Config) (responseBody []b
 	}
 
 	return body, nil
-}
-
-func (request *OrderContractGetRequest) Post(config Config) (*OrderContractGetResponse, error) {
-	request.RackcorpApiRequest.Configure(config)
-
-	requestBody, err := json.Marshal(request)
-	if err != nil {
-		return nil, errors.Wrapf(err, "Failed to JSON encode request: %v", request)
-	}
-
-	responseBody, err := postRackcorpApiRequest(requestBody, config)
-	if err != nil {
-		return nil, errors.Wrapf(err, "Failed to HTTP POST request: %v", request)
-	}
-
-	var response OrderContractGetResponse
-	err = json.Unmarshal(responseBody, &response)
-	if err != nil {
-		return nil, errors.Wrapf(err, "Could not JSON decode response: %s", responseBody)
-	}
-
-	return &response, nil
 }
 
 func (request *DeviceGetRequest) Post(config Config) (*DeviceGetResponse, error) {
