@@ -69,6 +69,14 @@ func resourceRackcorpServer() *schema.Resource {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
+			"device_cancel_transaction_id": {
+				Type:     schema.TypeInt,
+				Computed: true,
+			},
+			"device_cancel_transaction_status": {
+				Type:     schema.TypeString,
+				Computed: true,
+			},
 		},
 	}
 }
@@ -125,6 +133,26 @@ func resourceRackcorpServerPopulateFromContract(d *schema.ResourceData, config C
 	return nil
 }
 
+func resourceRackcorpServerPopulateFromTransaction(d *schema.ResourceData, config Config) error {
+	cancelTransactionId := d.Get("device_cancel_transaction_id").(int)
+	log.Printf("[TRACE] Rackcorp TransactionId id '%s'", cancelTransactionId)
+
+	if cancelTransactionId == 0 {
+		return nil
+	}
+
+	transaction, err := config.Client.TransactionGet(cancelTransactionId)
+	if err != nil {
+		return errors.Wrapf(err, "Could not get Rackcorp transaction with id '%s'.", cancelTransactionId)
+	}
+
+	log.Printf("[DEBUG] Rackcorp transaction: %#v", transaction)
+
+	panicOnError(d.Set("device_cancel_transaction_status", transaction.Status))
+
+	return nil
+}
+
 func getExtraByKey(key string, extras []api.DeviceExtra) string {
 	for _, extra := range extras {
 		if extra.Key == key {
@@ -157,12 +185,16 @@ func startServer(deviceId string, config Config) error {
 	return nil
 }
 
-func cancelServer(deviceId string, config Config) error {
+func cancelServer(deviceId string, d *schema.ResourceData, config Config) error {
 	transaction, err := config.Client.TransactionCreate(
 		api.TransactionTypeCancel,
 		api.TransactionObjectTypeDevice,
 		deviceId,
 		true)
+
+	panicOnError(d.Set("device_cancel_transaction_id", transaction.TransactionId))
+
+	err = waitForTransactionAttribute(d, config, "device_cancel_transaction_status", "COMPLETED", []string{"PENDING", "COMMENCED"})
 
 	if err != nil {
 		return errors.Wrapf(err, "Failed to cancel server with device id '%s'.", deviceId)
@@ -275,7 +307,7 @@ func resourceRackcorpServerRead(d *schema.ResourceData, meta interface{}) error 
 func resourceRackcorpServerDelete(d *schema.ResourceData, meta interface{}) error {
 	config := meta.(Config)
 	deviceId := d.Get("device_id").(string)
-	err := cancelServer(deviceId, config)
+	err := cancelServer(deviceId, d, config)
 	if err != nil {
 		return err
 	}
@@ -339,6 +371,42 @@ func newDeviceStateRefreshFunc(d *schema.ResourceData, config Config, attribute 
 	return func() (interface{}, string, error) {
 
 		err := resourceRackcorpServerPopulateFromDevice(d, config)
+		if err != nil {
+			return nil, "", err
+		}
+
+		if status, ok := d.GetOk(attribute); ok {
+			return d, status.(string), nil
+		}
+
+		return d, "", nil
+	}
+}
+
+func waitForTransactionAttribute(
+	d *schema.ResourceData, config Config, attribute string, target string, pending []string) error {
+
+	log.Printf(
+		"[INFO] Waiting for transaction to have %s of %s",
+		attribute, target)
+
+	stateConf := &resource.StateChangeConf{
+		Pending:    pending,
+		Target:     []string{target},
+		Refresh:    newTransactionStateRefreshFunc(d, config, attribute),
+		Timeout:    60 * time.Minute,
+		Delay:      10 * time.Second,
+		MinTimeout: 3 * time.Second,
+	}
+
+	_, err := stateConf.WaitForState()
+	return err
+}
+
+func newTransactionStateRefreshFunc(d *schema.ResourceData, config Config, attribute string) resource.StateRefreshFunc {
+	return func() (interface{}, string, error) {
+
+		err := resourceRackcorpServerPopulateFromTransaction(d, config)
 		if err != nil {
 			return nil, "", err
 		}
