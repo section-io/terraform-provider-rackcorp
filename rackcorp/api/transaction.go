@@ -19,6 +19,7 @@ type transactionCreateRequest struct {
 	ObjectType string `json:"objType"`
 	ObjectId   string `json:"objId"`
 	Type       string `json:"type"`
+	Confirm    bool   `json:"confirmation"`
 }
 
 type transactionCreateResponse struct {
@@ -39,7 +40,7 @@ const (
 	TransactionTypeStartup       = "STARTUP"
 )
 
-func (c *client) TransactionCreate(transactionType string, objectType string, objectId string) (*Transaction, error) {
+func (c *client) TransactionCreate(transactionType string, objectType string, objectId string, confirm bool) (*Transaction, error) {
 	if transactionType == "" {
 		return nil, errors.New("transactionType parameter is required.")
 	}
@@ -57,6 +58,7 @@ func (c *client) TransactionCreate(transactionType string, objectType string, ob
 		Type:       transactionType,
 		ObjectType: objectType,
 		ObjectId:   objectId,
+		Confirm:    confirm,
 	}
 
 	var resp transactionCreateResponse

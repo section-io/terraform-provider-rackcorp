@@ -144,7 +144,8 @@ func startServer(deviceId string, config Config) error {
 	transaction, err := config.Client.TransactionCreate(
 		api.TransactionTypeStartup,
 		api.TransactionObjectTypeDevice,
-		deviceId)
+		deviceId,
+		false)
 
 	if err != nil {
 		return errors.Wrapf(err, "Failed to start server with device id '%s'.", deviceId)
@@ -160,7 +161,8 @@ func cancelServer(deviceId string, config Config) error {
 	transaction, err := config.Client.TransactionCreate(
 		api.TransactionTypeCancel,
 		api.TransactionObjectTypeDevice,
-		deviceId)
+		deviceId,
+		true)
 
 	if err != nil {
 		return errors.Wrapf(err, "Failed to cancel server with device id '%s'.", deviceId)
