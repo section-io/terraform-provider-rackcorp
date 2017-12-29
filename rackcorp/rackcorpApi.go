@@ -82,19 +82,19 @@ func NewDeviceGetRequest(deviceId string) *DeviceGetRequest {
 }
 
 type RackcorpApiDevice struct {
-	DeviceId   string `json:"id"`
-	Name       string `json:"name"`
-	CustomerId string `json:"customerId"`
-	PrimaryIP  string `json:"primaryIP"`
-	Status     string `json:"status"`
-	Extra	   []RackcorpApiDeviceExtra `json:"extra"`      
+	DeviceId   string                   `json:"id"`
+	Name       string                   `json:"name"`
+	CustomerId string                   `json:"customerId"`
+	PrimaryIP  string                   `json:"primaryIP"`
+	Status     string                   `json:"status"`
+	Extra      []RackcorpApiDeviceExtra `json:"extra"`
 	// TODO assets, stdName, dateCreated, dateModified, dcDescription,
 	//  dcId, cName, extra, firewallPolicies, ips, networkRoutes, ports,
 	//  trafficCurrent, trafficEstimated, trafficMB, trafficShared
 }
 
 type RackcorpApiDeviceExtra struct {
-	Key  string `json:"key"`
+	Key   string      `json:"key"`
 	Value interface{} `json:"value"`
 }
 

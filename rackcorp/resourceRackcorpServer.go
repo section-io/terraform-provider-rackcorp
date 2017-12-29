@@ -146,9 +146,9 @@ func getDeviceByContract(contractId string, d *schema.ResourceData, meta interfa
 
 func GetExtraByKey(key string, extras []RackcorpApiDeviceExtra) (RackcorpApiDeviceExtra, error) {
 	for i := range extras {
-	    if extras[i].Key == key {
-	        return extras[i], nil
-	    }
+		if extras[i].Key == key {
+			return extras[i], nil
+		}
 	}
 	return RackcorpApiDeviceExtra{}, errors.New("Key not found")
 }
