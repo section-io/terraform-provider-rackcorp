@@ -10,15 +10,15 @@ type Transaction struct {
 	ConfirmationText     string `json:"confirmationText"`
 	ObjectType           string `json:"objType"`
 	ObjectId             string `json:"objId"`
-	TransactionType      string `json:"type"`
+	Type                 string `json:"type"`
 	// TODO data when type is known
 }
 
 type transactionCreateRequest struct {
 	request
-	ObjectType      string `json:"objType"`
-	ObjectId        string `json:"objId"`
-	TransactionType string `json:"type"`
+	ObjectType string `json:"objType"`
+	ObjectId   string `json:"objId"`
+	Type       string `json:"type"`
 }
 
 type transactionCreateResponse struct {
@@ -53,10 +53,10 @@ func (c *client) TransactionCreate(transactionType string, objectType string, ob
 	}
 
 	req := &transactionCreateRequest{
-		request:  c.newRequest("rctransaction.create"),
-		TransactionType: transactionType,
+		request:    c.newRequest("rctransaction.create"),
+		Type:       transactionType,
 		ObjectType: objectType,
-		ObjectId: objectId,
+		ObjectId:   objectId,
 	}
 
 	var resp transactionCreateResponse

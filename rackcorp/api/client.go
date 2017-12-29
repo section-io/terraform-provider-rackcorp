@@ -36,6 +36,8 @@ type Client interface {
 	OrderContractGet(contractId string) (*OrderContract, error)
 
 	DeviceGet(deviceId string) (*Device, error)
+
+	TransactionCreate(transactionType string, objectType string, objectId string) (*Transaction, error)
 }
 
 const (
