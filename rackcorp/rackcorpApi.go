@@ -16,10 +16,7 @@ const (
 	RackcorpApiResponseCodeFault        = "FAULT"
 
 	RackcorpApiDeviceGetCommand        = "device.get"
-	RackcorpApiOrderConfirmCommand     = "order.confirm"
 	RackcorpApiOrderContractGetCommand = "order.contract.get"
-	RackcorpApiOrderCreateCommand      = "order.create"
-	RackcorpApiOrderGetCommand         = "order.get"
 
 	RackcorpApiOrderStatusPending  = "PENDING"
 	RackcorpApiOrderStatusAccepted = "ACCEPTED"
@@ -39,32 +36,6 @@ type RackcorpApiRequest struct {
 type RackcorpApiResponse struct {
 	Code    string `json:"code"`
 	Message string `json:"message"`
-}
-
-type OrderGetRequest struct {
-	RackcorpApiRequest
-	OrderId string `json:"orderId"`
-}
-
-func NewOrderGetRequest(orderId string) *OrderGetRequest {
-	return &OrderGetRequest{
-		RackcorpApiRequest: RackcorpApiRequest{
-			Command: RackcorpApiOrderGetCommand,
-		},
-		OrderId: orderId,
-	}
-}
-
-type RackcorpApiOrder struct {
-	OrderId    string `json:"orderId"`
-	CustomerId string `json:"customerId"`
-	Status     string `json:"status"`
-	ContractId string `json:"contractId"`
-}
-
-type OrderGetResponse struct {
-	RackcorpApiResponse
-	Order RackcorpApiOrder `json:"order"`
 }
 
 type OrderContractGetRequest struct {
@@ -126,56 +97,6 @@ type DeviceGetResponse struct {
 	Device RackcorpApiDevice `json:"device"`
 }
 
-type OrderCreateRequest struct {
-	RackcorpApiRequest
-	ProductCode    string         `json:"productCode"`
-	CustomerId     string         `json:"customerId"`
-	ProductDetails ProductDetails `json:"productDetails"`
-}
-
-func NewOrderCreateRequest() *OrderCreateRequest {
-	return &OrderCreateRequest{
-		RackcorpApiRequest: RackcorpApiRequest{
-			Command: RackcorpApiOrderCreateCommand,
-		},
-	}
-}
-
-type ProductDetails struct {
-	Install  Install `json:"install"`
-	CpuCount int     `json:"cpu"`
-}
-
-type Install struct {
-	OperatingSystem string `json:"operatingSystem"`
-}
-
-type OrderCreateResponse struct {
-	RackcorpApiResponse
-	OrderId    int    `json:"orderId"`
-	ChangeText string `json:"changeTxt"`
-	// TODO cost, currency, netCost, retailCost, retailNetCost
-}
-
-type OrderConfirmRequest struct {
-	RackcorpApiRequest
-	OrderId string `json:"orderId"`
-}
-
-func NewOrderConfirmRequest(orderId string) *OrderConfirmRequest {
-	return &OrderConfirmRequest{
-		RackcorpApiRequest: RackcorpApiRequest{
-			Command: RackcorpApiOrderConfirmCommand,
-		},
-		OrderId: orderId,
-	}
-}
-
-type OrderConfirmResponse struct {
-	RackcorpApiResponse
-	ContractIds []int `json:"contractID"`
-}
-
 func safeClose(c io.Closer, err *error) {
 	if cerr := c.Close(); cerr != nil && *err == nil {
 		*err = cerr
@@ -201,72 +122,6 @@ func postRackcorpApiRequest(requestBody []byte, config Config) (responseBody []b
 	}
 
 	return body, nil
-}
-
-func (request *OrderCreateRequest) Post(config Config) (*OrderCreateResponse, error) {
-	request.RackcorpApiRequest.Configure(config)
-
-	requestBody, err := json.Marshal(request)
-	if err != nil {
-		return nil, errors.Wrapf(err, "Failed to JSON encode request: %v", request)
-	}
-
-	responseBody, err := postRackcorpApiRequest(requestBody, config)
-	if err != nil {
-		return nil, errors.Wrapf(err, "Failed to HTTP POST request: %v", request)
-	}
-
-	var response OrderCreateResponse
-	err = json.Unmarshal(responseBody, &response)
-	if err != nil {
-		return nil, errors.Wrapf(err, "Could not JSON decode response: %s", responseBody)
-	}
-
-	return &response, nil
-}
-
-func (request *OrderConfirmRequest) Post(config Config) (*OrderConfirmResponse, error) {
-	request.RackcorpApiRequest.Configure(config)
-
-	requestBody, err := json.Marshal(request)
-	if err != nil {
-		return nil, errors.Wrapf(err, "Failed to JSON encode request: %v", request)
-	}
-
-	responseBody, err := postRackcorpApiRequest(requestBody, config)
-	if err != nil {
-		return nil, errors.Wrapf(err, "Failed to HTTP POST request: %v", request)
-	}
-
-	var response OrderConfirmResponse
-	err = json.Unmarshal(responseBody, &response)
-	if err != nil {
-		return nil, errors.Wrapf(err, "Could not JSON decode response: %s", responseBody)
-	}
-
-	return &response, nil
-}
-
-func (request *OrderGetRequest) Post(config Config) (*OrderGetResponse, error) {
-	request.RackcorpApiRequest.Configure(config)
-
-	requestBody, err := json.Marshal(request)
-	if err != nil {
-		return nil, errors.Wrapf(err, "Failed to JSON encode request: %v", request)
-	}
-
-	responseBody, err := postRackcorpApiRequest(requestBody, config)
-	if err != nil {
-		return nil, errors.Wrapf(err, "Failed to HTTP POST request: %v", request)
-	}
-
-	var response OrderGetResponse
-	err = json.Unmarshal(responseBody, &response)
-	if err != nil {
-		return nil, errors.Wrapf(err, "Could not JSON decode response: %s", responseBody)
-	}
-
-	return &response, nil
 }
 
 func (request *OrderContractGetRequest) Post(config Config) (*OrderContractGetResponse, error) {

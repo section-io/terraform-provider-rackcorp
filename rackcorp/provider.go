@@ -3,6 +3,7 @@ package rackcorp
 import (
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/terraform/terraform"
+	"github.com/section-io/terraform-provider-rackcorp/rackcorp/api"
 )
 
 func Provider() terraform.ResourceProvider {
@@ -37,7 +38,13 @@ func Provider() terraform.ResourceProvider {
 }
 
 func providerConfigure(d *schema.ResourceData) (interface{}, error) {
+	client, err := api.NewClient(d.Get("api_uuid").(string), d.Get("api_secret").(string))
+	if err != nil {
+		return nil, err
+	}
+
 	config := Config{
+		Client:     client,
 		ApiUuid:    d.Get("api_uuid").(string),
 		ApiSecret:  d.Get("api_secret").(string),
 		CustomerId: d.Get("customer_id").(string),
@@ -48,6 +55,7 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 }
 
 type Config struct {
+	Client     api.Client
 	ApiUuid    string
 	ApiSecret  string
 	ApiAddress string

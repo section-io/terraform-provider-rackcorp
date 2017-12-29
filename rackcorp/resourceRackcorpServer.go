@@ -3,12 +3,12 @@ package rackcorp
 import (
 	"fmt"
 	"log"
-	"strconv"
 	"time"
 
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/pkg/errors"
+	"github.com/section-io/terraform-provider-rackcorp/rackcorp/api"
 )
 
 func resourceRackcorpServer() *schema.Resource {
@@ -130,49 +130,34 @@ func getDeviceByContract(contractId string, d *schema.ResourceData, meta interfa
 func resourceRackcorpServerCreate(d *schema.ResourceData, meta interface{}) error {
 	config := meta.(Config)
 
-	install := Install{
+	install := api.Install{
 		OperatingSystem: d.Get("operating_system").(string),
 	}
 
-	productDetails := ProductDetails{
+	productDetails := api.ProductDetails{
 		Install:  install,
 		CpuCount: d.Get("cpu_count").(int),
 	}
 
-	orderRequest := NewOrderCreateRequest()
-	orderRequest.CustomerId = config.CustomerId
-	orderRequest.ProductCode = "SERVER_VIRTUAL_" + d.Get("server_class").(string) + "_" + d.Get("country").(string)
-	orderRequest.ProductDetails = productDetails
+	productCode := "SERVER_VIRTUAL_" + d.Get("server_class").(string) + "_" + d.Get("country").(string)
 
-	orderResponse, err := orderRequest.Post(config)
+	createdOrder, err := config.Client.OrderCreate(productCode, config.CustomerId, productDetails)
 	if err != nil {
 		return errors.Wrap(err, "Rackcorp order create request failed.")
 	}
 
-	if orderResponse.Code != RackcorpApiResponseCodeOK {
-		return errors.Errorf("Unexpected Rackcorp server order response code '%s'.", orderResponse.Code)
-		// TODO log message too
-	}
-
-	orderId := strconv.Itoa(orderResponse.OrderId)
-	confirmRequest := NewOrderConfirmRequest(orderId)
-
-	confirmResponse, err := confirmRequest.Post(config)
+	orderId := createdOrder.OrderId
+	confirmedOrder, err := config.Client.OrderConfirm(orderId)
 	if err != nil {
 		return errors.Wrapf(err, "Failed to confirm Rackcorp server order '%s'.", orderId)
 	}
 
-	if confirmResponse.Code != RackcorpApiResponseCodeOK {
-		return errors.Errorf("Unexpected Rackcorp server order response code '%s'.", confirmResponse.Code)
-		// TODO log message too
-	}
-
-	contractCount := len(confirmResponse.ContractIds)
+	contractCount := len(confirmedOrder.ContractIds)
 	if contractCount != 1 {
 		return errors.Errorf("Expected one Rackcorp contract for order '%s' but received %d", orderId, contractCount)
 	}
 
-	contractId := strconv.Itoa(confirmResponse.ContractIds[0])
+	contractId := confirmedOrder.ContractIds[0]
 
 	panicOnError(d.Set("contract_id", contractId))
 
@@ -196,13 +181,12 @@ func resourceRackcorpServerRead(d *schema.ResourceData, meta interface{}) error 
 
 	config := meta.(Config)
 
-	orderGetRequest := NewOrderGetRequest(orderId)
-	orderGetResponse, err := orderGetRequest.Post(config)
+	order, err := config.Client.OrderGet(orderId)
 	if err != nil {
 		return errors.Wrapf(err, "Error retrieving Rackcorp order '%s'.", orderId)
 	}
 
-	contractId := orderGetResponse.Order.ContractId
+	contractId := order.ContractId
 	if contractId == "" {
 		log.Printf("[WARN] Rackcorp order '%s' not found.", orderId)
 		d.SetId("")
