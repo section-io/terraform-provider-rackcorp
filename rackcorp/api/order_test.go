@@ -7,21 +7,13 @@ import (
 	"gopkg.in/h2non/gock.v1"
 )
 
-func getClient(t *testing.T) Client {
-	const uuid = "dummy-uuid"
-	const secret = "dummy-secret"
-	client, err := NewClient(uuid, secret)
-	assert.Nil(t, err, "NewClient error")
-	return client
-}
-
 func TestOrderConfirm(t *testing.T) {
 	defer gock.Off()
 
 	const orderId = "432"
 	const responseBody = `{"contractID":[543],"code":"OK","message":"Order confirmed"}`
 
-	client := getClient(t)
+	client := getTestClient(t)
 
 	gock.New("https://api.rackcorp.net").
 		Post("/api/rest/v1/json.php").
@@ -50,7 +42,7 @@ func TestOrderCreate(t *testing.T) {
 
 	const responseBody = `{"orderId":123,"changeTxt":"Add NEW SUPPORT: SUPPORTSTD ($0.00)\nAdd NEW IPV6: 16 ($0.00)\n","code":"OK","message":"Order created"}`
 
-	client := getClient(t)
+	client := getTestClient(t)
 
 	gock.New("https://api.rackcorp.net").
 		Post("/api/rest/v1/json.php").
@@ -72,7 +64,7 @@ func TestOrderGet(t *testing.T) {
 	const orderId = "123"
 	const responseBody = `{"order":{"orderId":"123","customerId":"456","status":"ACCEPTED","contractId":"789"},"code":"OK","message":"Order lookup successful"}`
 
-	client := getClient(t)
+	client := getTestClient(t)
 
 	gock.New("https://api.rackcorp.net").
 		Post("/api/rest/v1/json.php").

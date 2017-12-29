@@ -32,6 +32,8 @@ type Client interface {
 	OrderConfirm(orderId string) (*ConfirmedOrder, error)
 	OrderCreate(productCode string, customerId string, productDetails ProductDetails) (*CreatedOrder, error)
 	OrderGet(orderId string) (*Order, error)
+
+	OrderContractGet(contractId string) (*OrderContract, error)
 }
 
 const (
