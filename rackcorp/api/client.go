@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"io"
 	"io/ioutil"
+	"log"
 	"net/http"
 
 	"github.com/pkg/errors"
@@ -79,7 +80,7 @@ func (c client) newRequest(command string) request {
 }
 
 func (c client) httpPost(requestBody []byte) (responseBody []byte, outErr error) {
-
+	log.Printf("[TRACE] httpPost '%s'", requestBody)
 	response, err := http.Post(c.address, "application/json", bytes.NewReader(requestBody))
 	if err != nil {
 		return nil, errors.Wrap(err, "HTTP POST failed for request.")
