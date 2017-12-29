@@ -34,6 +34,8 @@ type Client interface {
 	OrderGet(orderId string) (*Order, error)
 
 	OrderContractGet(contractId string) (*OrderContract, error)
+
+	DeviceGet(deviceId string) (*Device, error)
 }
 
 const (

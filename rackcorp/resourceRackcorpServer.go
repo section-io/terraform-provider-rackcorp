@@ -1,7 +1,6 @@
 package rackcorp
 
 import (
-	"fmt"
 	"log"
 	"time"
 
@@ -89,23 +88,21 @@ func getDeviceByContract(contractId string, d *schema.ResourceData, meta interfa
 		return nil
 	}
 
-	deviceGetRequest := NewDeviceGetRequest(deviceId)
-	deviceGetResponse, err := deviceGetRequest.Post(config)
+	device, err := config.Client.DeviceGet(deviceId)
 	if err != nil {
 		return errors.Wrapf(err, "Error retrieving Rackcorp device '%s'.", deviceId)
 	}
 
-	device := deviceGetResponse.Device
 	if device.DeviceId == "" {
 		log.Printf("[WARN] Rackcorp device '%s' not found.", deviceId)
 		d.SetId("")
 		return nil
 	}
 
-	sysPowerSwitch, err := GetExtraByKey("SYS_POWERSWITCH", device.Extra)
-	sysPowerStatus, err := GetExtraByKey("SYS_POWERSTATUS", device.Extra)
+	sysPowerSwitch := getExtraByKey("SYS_POWERSWITCH", device.Extra)
+	sysPowerStatus := getExtraByKey("SYS_POWERSTATUS", device.Extra)
 
-	if sysPowerSwitch.Value == "ONLINE" && sysPowerStatus.Value == "ONLINE" {
+	if sysPowerSwitch == "ONLINE" && sysPowerStatus == "ONLINE" {
 		panicOnError(d.Set("device_status", "ONLINE"))
 	}
 
@@ -124,13 +121,19 @@ func getDeviceByContract(contractId string, d *schema.ResourceData, meta interfa
 	return nil
 }
 
-func GetExtraByKey(key string, extras []RackcorpApiDeviceExtra) (RackcorpApiDeviceExtra, error) {
-	for i := range extras {
-		if extras[i].Key == key {
-			return extras[i], nil
+func getExtraByKey(key string, extras []api.DeviceExtra) string {
+	for _, extra := range extras {
+		if extra.Key == key {
+			if extra.Value == nil {
+				return ""
+			}
+			if s, ok := extra.Value.(string); ok {
+				return s
+			}
+			return ""
 		}
 	}
-	return RackcorpApiDeviceExtra{}, errors.New("Key not found")
+	return ""
 }
 
 func resourceRackcorpServerCreate(d *schema.ResourceData, meta interface{}) error {
@@ -244,14 +247,16 @@ func waitForDeviceAttribute(
 	d *schema.ResourceData, target string, pending []string, attribute string, meta interface{}) (interface{}, error) {
 	// Wait for the contract so we can get the device attributes
 	// that show up after a while
+
+	deviceId := d.Get("device_id").(string)
 	log.Printf(
 		"[INFO] Waiting for device (%s) to have %s of %s",
-		d.Get("device_id").(string), attribute, target)
+		deviceId, attribute, target)
 
 	stateConf := &resource.StateChangeConf{
 		Pending:    pending,
 		Target:     []string{target},
-		Refresh:    newDeviceStateRefreshFunc(d, attribute, meta),
+		Refresh:    newDeviceStateRefreshFunc(deviceId, meta.(Config).Client),
 		Timeout:    60 * time.Minute,
 		Delay:      10 * time.Second,
 		MinTimeout: 3 * time.Second,
@@ -260,33 +265,15 @@ func waitForDeviceAttribute(
 	return stateConf.WaitForState()
 }
 
-func newDeviceStateRefreshFunc(
-	d *schema.ResourceData, attribute string, meta interface{}) resource.StateRefreshFunc {
+func newDeviceStateRefreshFunc(deviceId string, client api.Client) resource.StateRefreshFunc {
 
-	config := meta.(Config)
 	return func() (interface{}, string, error) {
-		err := resourceRackcorpServerRead(d, meta)
+
+		device, err := client.DeviceGet(deviceId)
 		if err != nil {
-			return nil, "", err
+			return nil, "", errors.Wrapf(err, "Error retrieving device id '%s'", deviceId)
 		}
 
-		device_id := d.Get("device_id").(string)
-		if device_id == "" {
-			return nil, "", fmt.Errorf("device_id not available")
-		}
-
-		// See if we can access our attribute
-		if attr, ok := d.GetOk(attribute); ok {
-			// Retrieve the contract properties
-			deviceGetRequest := NewDeviceGetRequest(device_id)
-			deviceGetResponse, err := deviceGetRequest.Post(config)
-			if err != nil {
-				return nil, "", fmt.Errorf("Error retrieving device: %s", err)
-			}
-
-			return &deviceGetResponse, attr.(string), nil
-		}
-
-		return nil, "", nil
+		return device, device.Status, nil
 	}
 }
