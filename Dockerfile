@@ -44,8 +44,9 @@ COPY example.tf ./main.tf
 # https://www.terraform.io/docs/internals/debugging.html
 ARG TF_LOG=WARN
 
-RUN terraform init
-
-RUN terraform plan -out=a.tfplan
-
-RUN terraform apply a.tfplan
+RUN terraform init && \
+  terraform plan -out=a.tfplan && \
+  terraform apply a.tfplan && \
+  terraform plan -out=b.tfplan && \
+  terraform plan -destroy -out=destroy.tfplan && \
+  terraform apply destroy.tfplan
