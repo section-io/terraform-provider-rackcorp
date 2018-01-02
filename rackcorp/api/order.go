@@ -22,7 +22,8 @@ type ProductDetails struct {
 
 type Install struct {
 	OperatingSystem   string `json:"operatingSystem"`
-	PostInstallScript string `json:"postInstallScript"`
+	PostInstallScript string `json:"postInstallScript,omitempty"`
+	Template          string `json:"template,omitempty"`
 }
 
 type Credential struct {
