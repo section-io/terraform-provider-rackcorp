@@ -6,10 +6,18 @@ import (
 	"github.com/pkg/errors"
 )
 
+type Storage struct {
+	Name        string `json:"name,omitempty"`
+	SizeMB      int    `json:"sizeMB"`
+	StorageType string `json:"type"`
+	SortOrder   int    `json:"order,omitempty"`
+}
+
 type ProductDetails struct {
 	Credentials []Credential `json:"credentials"`
 	Install     Install      `json:"install"`
 	CpuCount    int          `json:"cpu"`
+	Storage     []Storage    `json:"storage,omitempty"`
 }
 
 type Install struct {
@@ -71,6 +79,11 @@ type orderGetResponse struct {
 	response
 	Order *Order `json:"order"`
 }
+
+const (
+	StorageTypeMagnetic = "MAGNETIC"
+	StorageTypeSSD      = "SSD"
+)
 
 func sliceItoa(i []int) []string {
 	a := make([]string, len(i))

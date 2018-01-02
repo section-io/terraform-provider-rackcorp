@@ -10,6 +10,31 @@ import (
 	"github.com/section-io/terraform-provider-rackcorp/rackcorp/api"
 )
 
+func storageSchemaElement() *schema.Resource {
+	return &schema.Resource{
+		Schema: map[string]*schema.Schema{
+			"name": {
+				Type:     schema.TypeString,
+				Optional: true,
+			},
+			"size_mb": {
+				Type:     schema.TypeInt,
+				Required: true,
+				// TODO ValidateFunc:
+			},
+			"type": {
+				Type:     schema.TypeString,
+				Optional: true,
+				// TODO ValidateFunc:
+			},
+			"sort_order": {
+				Type:     schema.TypeInt,
+				Optional: true,
+			},
+		},
+	}
+}
+
 func resourceRackcorpServer() *schema.Resource {
 	return &schema.Resource{
 		Create: resourceRackcorpServerCreate,
@@ -46,6 +71,13 @@ func resourceRackcorpServer() *schema.Resource {
 				Type:     schema.TypeString,
 				Optional: true,
 				ForceNew: true,
+			},
+			"storage": {
+				Type:     schema.TypeList,
+				Optional: true,
+				ForceNew: true,
+				MinItems: 1,
+				Elem:     storageSchemaElement(),
 			},
 			"device_id": {
 				Type:     schema.TypeString,
@@ -212,6 +244,39 @@ func cancelServer(deviceId string, d *schema.ResourceData, config Config) error 
 	return nil
 }
 
+func translateStorage(d *schema.ResourceData) []api.Storage {
+	var result []api.Storage
+	list, ok := d.GetOk("storage")
+	if !ok {
+		return result
+	}
+
+	for _, raw := range list.([]interface{}) {
+		data := raw.(map[string]interface{})
+
+		storage := api.Storage{
+			SizeMB:      data["size_mb"].(int),
+			StorageType: api.StorageTypeMagnetic,
+		}
+
+		if v := data["name"].(string); v != "" {
+			storage.Name = v
+		}
+
+		if v := data["type"].(string); v != "" {
+			storage.StorageType = v
+		}
+
+		if v := data["sort_order"].(int); v != 0 {
+			storage.SortOrder = v
+		}
+
+		result = append(result, storage)
+	}
+
+	return result
+}
+
 func resourceRackcorpServerCreate(d *schema.ResourceData, meta interface{}) error {
 	config := meta.(Config)
 
@@ -234,6 +299,7 @@ func resourceRackcorpServerCreate(d *schema.ResourceData, meta interface{}) erro
 		Credentials: credentials,
 		Install:     install,
 		CpuCount:    d.Get("cpu_count").(int),
+		Storage:     translateStorage(d),
 	}
 
 	productCode := "SERVER_VIRTUAL_" + d.Get("server_class").(string) + "_" + d.Get("country").(string)
