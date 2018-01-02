@@ -9,6 +9,7 @@ resource "rackcorp_server" "example" {
   server_class     = "the-server_class-from-tf"
   operating_system = "the-operating-system-from-tf"
   cpu_count        = 1
+  memory_gb        = 4
   root_password    = "a-secret-password"
 
   // post_install_script = "${file("a-script.sh")}"

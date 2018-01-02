@@ -61,6 +61,11 @@ func resourceRackcorpServer() *schema.Resource {
 				Required: true,
 				ForceNew: true,
 			},
+			"memory_gb": {
+				Type:     schema.TypeInt,
+				Required: true,
+				ForceNew: true,
+			},
 			"root_password": {
 				Type:      schema.TypeString,
 				Required:  true,
@@ -299,6 +304,7 @@ func resourceRackcorpServerCreate(d *schema.ResourceData, meta interface{}) erro
 		Credentials: credentials,
 		Install:     install,
 		CpuCount:    d.Get("cpu_count").(int),
+		MemoryGB:    d.Get("memory_gb").(int),
 		Storage:     translateStorage(d),
 	}
 

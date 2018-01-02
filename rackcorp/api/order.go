@@ -18,6 +18,7 @@ type ProductDetails struct {
 	Install     Install      `json:"install"`
 	CpuCount    int          `json:"cpu"`
 	Storage     []Storage    `json:"storage,omitempty"`
+	MemoryGB    int          `json:"memoryGB"`
 }
 
 type Install struct {
