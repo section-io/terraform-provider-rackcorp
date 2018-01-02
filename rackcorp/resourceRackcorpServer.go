@@ -37,9 +37,10 @@ func resourceRackcorpServer() *schema.Resource {
 				ForceNew: true,
 			},
 			"root_password": {
-				Type:     schema.TypeString,
-				Required: true,
-				ForceNew: true,
+				Type:      schema.TypeString,
+				Required:  true,
+				ForceNew:  true,
+				Sensitive: true,
 			},
 			"device_id": {
 				Type:     schema.TypeString,
