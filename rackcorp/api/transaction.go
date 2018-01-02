@@ -1,17 +1,19 @@
 package api
 
 import (
+	"strconv"
+
 	"github.com/pkg/errors"
 )
 
-type Transaction struct {
+type createdTransaction struct {
 	TransactionId        int    `json:"rcTransactionId"`
 	ConfirmationRequired bool   `json:"confirmationRequired"`
 	ConfirmationText     string `json:"confirmationText"`
 	ObjectType           string `json:"objType"`
 	ObjectId             string `json:"objId"`
 	Type                 string `json:"type"`
-	// TODO data when type is known
+	Data                 string `json:"data"`
 }
 
 type transactionCreateRequest struct {
@@ -24,15 +26,15 @@ type transactionCreateRequest struct {
 
 type transactionCreateResponse struct {
 	response
-	Transaction *Transaction `json:"rcTransaction"`
+	Transaction *createdTransaction `json:"rcTransaction"`
 }
 
-type TransactionGet struct {
-	Data          string `json:"data"`
-	Method        string `json:"method"`
-	ObjectId      string `json:"objId"`
-	ObjectType    string `json:"objType"`
+type existingTransaction struct {
 	TransactionId string `json:"rcTransactionId"`
+	ObjectType    string `json:"objType"`
+	ObjectId      string `json:"objId"`
+	Type          string `json:"method"`
+	Data          string `json:"data"`
 	Status        string `json:"status"`
 	StatusInfo    string `json:"statusInfo"`
 }
@@ -44,7 +46,19 @@ type transactionGetRequest struct {
 
 type transactionGetResponse struct {
 	response
-	Transaction *TransactionGet `json:"rcTransaction"`
+	Transaction *existingTransaction `json:"rcTransaction"`
+}
+
+type Transaction struct {
+	TransactionId        string
+	ObjectType           string
+	ObjectId             string
+	Type                 string
+	Data                 string
+	ConfirmationRequired bool
+	ConfirmationText     string
+	Status               string
+	StatusInfo           string
 }
 
 const (
@@ -59,6 +73,30 @@ const (
 	TransactionTypeShutdown      = "SHUTDOWN"
 	TransactionTypeStartup       = "STARTUP"
 )
+
+func (t *createdTransaction) ToTransaction() *Transaction {
+	return &Transaction{
+		TransactionId:        strconv.Itoa(t.TransactionId),
+		ObjectType:           t.ObjectType,
+		ObjectId:             t.ObjectId,
+		Type:                 t.Type,
+		Data:                 t.Data,
+		ConfirmationRequired: t.ConfirmationRequired,
+		ConfirmationText:     t.ConfirmationText,
+	}
+}
+
+func (t *existingTransaction) ToTransaction() *Transaction {
+	return &Transaction{
+		TransactionId: t.TransactionId,
+		ObjectType:    t.ObjectType,
+		ObjectId:      t.ObjectId,
+		Type:          t.Type,
+		Data:          t.Data,
+		Status:        t.Status,
+		StatusInfo:    t.StatusInfo,
+	}
+}
 
 func (c *client) TransactionCreate(transactionType string, objectType string, objectId string, confirm bool) (*Transaction, error) {
 	if transactionType == "" {
@@ -91,17 +129,22 @@ func (c *client) TransactionCreate(transactionType string, objectType string, ob
 		return nil, newApiError(resp.response, nil)
 	}
 
-	return resp.Transaction, nil
+	return resp.Transaction.ToTransaction(), nil
 }
 
-func (c *client) TransactionGet(transactionId int) (*TransactionGet, error) {
+func (c *client) TransactionGet(transactionId string) (*Transaction, error) {
+	numericId, err := strconv.Atoi(transactionId)
+	if err != nil {
+		return nil, errors.Wrap(err, "Invalid transactionId")
+	}
+
 	req := &transactionGetRequest{
 		request:       c.newRequest("rctransaction.get"),
-		TransactionId: transactionId,
+		TransactionId: numericId,
 	}
 
 	var resp transactionGetResponse
-	err := c.httpPostJson(req, &resp)
+	err = c.httpPostJson(req, &resp)
 	if err != nil {
 		return nil, errors.Wrap(err, "TransactionCreate request failed.")
 	}
@@ -110,5 +153,5 @@ func (c *client) TransactionGet(transactionId int) (*TransactionGet, error) {
 		return nil, newApiError(resp.response, nil)
 	}
 
-	return resp.Transaction, nil
+	return resp.Transaction.ToTransaction(), nil
 }

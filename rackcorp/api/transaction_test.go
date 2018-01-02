@@ -27,7 +27,7 @@ func TestTransactionCreate(t *testing.T) {
 		false)
 	assert.Nil(t, err, "TransactionCreate error")
 
-	assert.Equal(t, 141414, transaction.TransactionId, "TransactionId")
+	assert.Equal(t, "141414", transaction.TransactionId, "TransactionId")
 	assert.Equal(t, "STARTUP", transaction.Type, "Type")
 	assert.Equal(t, "DEVICE", transaction.ObjectType, "ObjectType")
 	assert.Equal(t, objectId, transaction.ObjectId, "ObjectId")

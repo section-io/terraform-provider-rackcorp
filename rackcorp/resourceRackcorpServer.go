@@ -70,7 +70,7 @@ func resourceRackcorpServer() *schema.Resource {
 				Computed: true,
 			},
 			"device_cancel_transaction_id": {
-				Type:     schema.TypeInt,
+				Type:     schema.TypeString,
 				Computed: true,
 			},
 			"device_cancel_transaction_status": {
@@ -134,10 +134,10 @@ func resourceRackcorpServerPopulateFromContract(d *schema.ResourceData, config C
 }
 
 func resourceRackcorpServerPopulateFromTransaction(d *schema.ResourceData, config Config) error {
-	cancelTransactionId := d.Get("device_cancel_transaction_id").(int)
-	log.Printf("[TRACE] Rackcorp TransactionId id '%d'", cancelTransactionId)
+	cancelTransactionId := d.Get("device_cancel_transaction_id").(string)
+	log.Printf("[TRACE] Rackcorp TransactionId id '%s'.", cancelTransactionId)
 
-	if cancelTransactionId == 0 {
+	if cancelTransactionId == "" {
 		return nil
 	}
 

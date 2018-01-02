@@ -39,7 +39,7 @@ type Client interface {
 	DeviceGet(deviceId string) (*Device, error)
 
 	TransactionCreate(transactionType string, objectType string, objectId string, confirm bool) (*Transaction, error)
-	TransactionGet(transactionId int) (*TransactionGet, error)
+	TransactionGet(transactionId string) (*Transaction, error)
 }
 
 const (
