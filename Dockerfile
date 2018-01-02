@@ -41,6 +41,8 @@ COPY --from=build /go/bin/terraform-provider-rackcorp /go/bin/
 
 COPY example.tf ./main.tf
 
+RUN terraform fmt -diff -check ./
+
 # https://www.terraform.io/docs/internals/debugging.html
 ARG TF_LOG=WARN
 
