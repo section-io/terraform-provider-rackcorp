@@ -135,7 +135,7 @@ func resourceRackcorpServerPopulateFromContract(d *schema.ResourceData, config C
 
 func resourceRackcorpServerPopulateFromTransaction(d *schema.ResourceData, config Config) error {
 	cancelTransactionId := d.Get("device_cancel_transaction_id").(int)
-	log.Printf("[TRACE] Rackcorp TransactionId id '%s'", cancelTransactionId)
+	log.Printf("[TRACE] Rackcorp TransactionId id '%d'", cancelTransactionId)
 
 	if cancelTransactionId == 0 {
 		return nil

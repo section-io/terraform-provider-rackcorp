@@ -28,13 +28,13 @@ type transactionCreateResponse struct {
 }
 
 type TransactionGet struct {
-	Data string `json:"data"`
-	Method string `json:"method"`
-	ObjectId string `json:"objId"`
-	ObjectType string `json:"objType"`
+	Data          string `json:"data"`
+	Method        string `json:"method"`
+	ObjectId      string `json:"objId"`
+	ObjectType    string `json:"objType"`
 	TransactionId string `json:"rcTransactionId"`
-	Status string `json:"status"`
-	StatusInfo string `json:"statusInfo"`
+	Status        string `json:"status"`
+	StatusInfo    string `json:"statusInfo"`
 }
 
 type transactionGetRequest struct {

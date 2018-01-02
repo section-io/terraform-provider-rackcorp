@@ -23,7 +23,8 @@ func TestTransactionCreate(t *testing.T) {
 	transaction, err := client.TransactionCreate(
 		TransactionTypeStartup,
 		TransactionObjectTypeDevice,
-		objectId)
+		objectId,
+		false)
 	assert.Nil(t, err, "TransactionCreate error")
 
 	assert.Equal(t, 141414, transaction.TransactionId, "TransactionId")
