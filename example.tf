@@ -8,4 +8,6 @@ resource "rackcorp_server" "example" {
   country = "the-country-from-tf"
   server_class = "the-server_class-from-tf"
   operating_system = "the-operating-system-from-tf"
+  cpu_count = 1
+  root_password = "a-secret-password"
 }
