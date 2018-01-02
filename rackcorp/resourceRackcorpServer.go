@@ -210,8 +210,11 @@ func cancelServer(deviceId string, d *schema.ResourceData, config Config) error 
 func resourceRackcorpServerCreate(d *schema.ResourceData, meta interface{}) error {
 	config := meta.(Config)
 
-	credentials := api.Credentials{
-		RootPassword: d.Get("root_password").(string),
+	credentials := []api.Credential{
+		{
+			Username: "root",
+			Password: d.Get("root_password").(string),
+		},
 	}
 
 	install := api.Install{
