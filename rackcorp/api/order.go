@@ -13,7 +13,8 @@ type ProductDetails struct {
 }
 
 type Install struct {
-	OperatingSystem string `json:"operatingSystem"`
+	OperatingSystem   string `json:"operatingSystem"`
+	PostInstallScript string `json:"postInstallScript"`
 }
 
 type Credential struct {

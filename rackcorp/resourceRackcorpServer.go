@@ -42,6 +42,11 @@ func resourceRackcorpServer() *schema.Resource {
 				ForceNew:  true,
 				Sensitive: true,
 			},
+			"post_install_script": {
+				Type:     schema.TypeString,
+				Optional: true,
+				ForceNew: true,
+			},
 			"device_id": {
 				Type:     schema.TypeString,
 				Computed: true,
@@ -219,6 +224,10 @@ func resourceRackcorpServerCreate(d *schema.ResourceData, meta interface{}) erro
 
 	install := api.Install{
 		OperatingSystem: d.Get("operating_system").(string),
+	}
+
+	if script, ok := d.GetOk("post_install_script"); ok {
+		install.PostInstallScript = script.(string)
 	}
 
 	productDetails := api.ProductDetails{
