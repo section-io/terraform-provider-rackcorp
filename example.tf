@@ -10,4 +10,15 @@ resource "rackcorp_server" "example" {
   operating_system = "the-operating-system-from-tf"
   cpu_count        = 1
   root_password    = "a-secret-password"
+
+  // post_install_script = "${file("a-script.sh")}"
+
+  /*
+  storage = [
+    {
+      size_mb = 50
+      type    = "SSD" // or MAGNETIC
+    },
+  ]
+  */
 }
