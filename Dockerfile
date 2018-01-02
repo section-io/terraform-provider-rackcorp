@@ -47,8 +47,4 @@ RUN terraform fmt -diff -check ./
 ARG TF_LOG=WARN
 
 RUN terraform init && \
-  terraform plan -out=a.tfplan && \
-  terraform apply a.tfplan && \
-  terraform plan -out=b.tfplan && \
-  terraform plan -destroy -out=destroy.tfplan && \
-  terraform apply destroy.tfplan
+  terraform plan -out=a.tfplan
