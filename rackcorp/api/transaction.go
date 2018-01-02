@@ -85,6 +85,10 @@ type Transaction struct {
 const (
 	TransactionObjectTypeDevice = "DEVICE"
 
+	TransactionStatusCommenced = "COMMENCED"
+	TransactionStatusCompleted = "COMPLETED"
+	TransactionStatusPending   = "PENDING"
+
 	TransactionTypeCancel        = "CANCEL"
 	TransactionTypeCloseVNC      = "CLOSEVNC"
 	TransactionTypeForceShutdown = "FORCESHUTDOWN"

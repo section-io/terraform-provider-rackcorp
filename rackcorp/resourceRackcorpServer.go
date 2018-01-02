@@ -249,10 +249,15 @@ func resourceRackcorpServerCreate(d *schema.ResourceData, meta interface{}) erro
 
 	err = waitForContractStatus(d, config, "ACTIVE", []string{"PENDING"})
 	if err != nil {
-		return errors.Wrapf(err, "Error waiting for Rackcorp contract status to be ACTIVE '%s'.", err)
+		return errors.Wrap(err, "Error waiting for Rackcorp contract status to be ACTIVE")
 	}
 
 	deviceId := d.Get("device_id").(string)
+	err = waitForPendingDeviceTransactions(deviceId, config)
+	if err != nil {
+		return errors.Wrap(err, "Error waiting for Rackcorp device transactions to complete")
+	}
+
 	err = startServer(deviceId, config)
 	if err != nil {
 		return err
@@ -260,10 +265,8 @@ func resourceRackcorpServerCreate(d *schema.ResourceData, meta interface{}) erro
 
 	err = waitForDeviceAttribute(d, config, "device_status", "ONLINE", []string{"OFFLINE"})
 	if err != nil {
-		return errors.Wrapf(err, "Error waiting for Rackcorp device status to be ONLINE '%s'.", err)
+		return errors.Wrap(err, "Error waiting for Rackcorp device status to be ONLINE")
 	}
-
-	// TODO wait for all pending transactions for device to complete
 
 	return nil
 }
@@ -417,4 +420,47 @@ func newTransactionStateRefreshFunc(d *schema.ResourceData, config Config, attri
 
 		return d, "", nil
 	}
+}
+
+func waitForPendingDeviceTransactions(deviceId string, config Config) error {
+	stateConf := &resource.StateChangeConf{
+		Pending:    []string{api.TransactionStatusPending},
+		Target:     []string{api.TransactionStatusCompleted},
+		Refresh:    newPendingTransactionsRefreshFunc(deviceId, config),
+		Timeout:    60 * time.Minute,
+		Delay:      10 * time.Second,
+		MinTimeout: 3 * time.Second,
+	}
+
+	_, err := stateConf.WaitForState()
+	return err
+}
+
+func newPendingTransactionsRefreshFunc(deviceId string, config Config) resource.StateRefreshFunc {
+	var dummyResource struct{}
+	filter := api.TransactionFilter{
+		ObjectType:   api.TransactionObjectTypeDevice,
+		ObjectId:     []string{deviceId},
+		Status:       []string{api.TransactionStatusPending, api.TransactionStatusCommenced},
+		ResultWindow: 1,
+	}
+
+	return func() (interface{}, string, error) {
+
+		transactions, matches, err := config.Client.TransactionGetAll(filter)
+		if err != nil {
+			return nil, "", err
+		}
+
+		if matches == 0 {
+			return dummyResource, api.TransactionStatusCompleted, nil
+		}
+
+		for _, t := range transactions {
+			log.Printf("[TRACE] pending transaction: %#v", t)
+		}
+
+		return dummyResource, api.TransactionStatusPending, nil
+	}
+
 }
