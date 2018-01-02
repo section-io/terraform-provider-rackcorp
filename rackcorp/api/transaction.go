@@ -49,6 +49,27 @@ type transactionGetResponse struct {
 	Transaction *existingTransaction `json:"rcTransaction"`
 }
 
+type TransactionFilter struct {
+	ObjectType   string   `json:"objType"`
+	ObjectId     []string `json:"objId,omitempty"`
+	Type         []string `json:"method,omitempty"`
+	Status       []string `json:"status,omitempty"`
+	CustomerId   []string `json:"customerId,omitempty"`
+	ResultStart  int      `json:"resStart,omitempty"`
+	ResultWindow int      `json:"resWindow,omitempty"`
+}
+
+type transactionGetAllRequest struct {
+	request
+	TransactionFilter
+}
+
+type transactionGetAllResponse struct {
+	response
+	Matches      int                   `json:"matches"`
+	Transactions []existingTransaction `json:"rcTransactions"`
+}
+
 type Transaction struct {
 	TransactionId        string
 	ObjectType           string
@@ -146,7 +167,7 @@ func (c *client) TransactionGet(transactionId string) (*Transaction, error) {
 	var resp transactionGetResponse
 	err = c.httpPostJson(req, &resp)
 	if err != nil {
-		return nil, errors.Wrap(err, "TransactionCreate request failed.")
+		return nil, errors.Wrap(err, "TransactionGet request failed.")
 	}
 
 	if resp.Code != "OK" || resp.Transaction == nil {
@@ -154,4 +175,32 @@ func (c *client) TransactionGet(transactionId string) (*Transaction, error) {
 	}
 
 	return resp.Transaction.ToTransaction(), nil
+}
+
+func (c *client) TransactionGetAll(filter TransactionFilter) ([]Transaction, int, error) {
+	if filter.ObjectType == "" {
+		return nil, 0, errors.New("ObjectType field of TransactionFilter is required.")
+	}
+
+	req := &transactionGetAllRequest{
+		request:           c.newRequest("rctransaction.getall"),
+		TransactionFilter: filter,
+	}
+
+	var resp transactionGetAllResponse
+	err := c.httpPostJson(req, &resp)
+	if err != nil {
+		return nil, 0, errors.Wrap(err, "TransactionGetAll request failed.")
+	}
+
+	if resp.Code != "OK" || resp.Transactions == nil {
+		return nil, 0, newApiError(resp.response, nil)
+	}
+
+	transactions := make([]Transaction, len(resp.Transactions))
+	for index, transaction := range resp.Transactions {
+		transactions[index] = *transaction.ToTransaction()
+	}
+
+	return transactions, resp.Matches, nil
 }

@@ -40,6 +40,7 @@ type Client interface {
 
 	TransactionCreate(transactionType string, objectType string, objectId string, confirm bool) (*Transaction, error)
 	TransactionGet(transactionId string) (*Transaction, error)
+	TransactionGetAll(filter TransactionFilter) ([]Transaction, int, error)
 }
 
 const (
