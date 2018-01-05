@@ -14,11 +14,14 @@ type Storage struct {
 }
 
 type ProductDetails struct {
-	Credentials []Credential `json:"credentials"`
-	Install     Install      `json:"install"`
-	CpuCount    int          `json:"cpu"`
-	Storage     []Storage    `json:"storage,omitempty"`
-	MemoryGB    int          `json:"memoryGB"`
+	Hostname     string       `json:"hostname,omitempty"`
+	DataCenterId string       `json:"dcId,omitempty"`
+	Credentials  []Credential `json:"credentials"`
+	Install      Install      `json:"install"`
+	CpuCount     int          `json:"cpu"`
+	Storage      []Storage    `json:"storage,omitempty"`
+	MemoryGB     int          `json:"memoryGB"`
+	TrafficGB    int          `json:"trafficGB,omitempty"`
 }
 
 type Install struct {
