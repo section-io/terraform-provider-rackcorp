@@ -45,10 +45,7 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 
 	config := Config{
 		Client:     client,
-		ApiUuid:    d.Get("api_uuid").(string),
-		ApiSecret:  d.Get("api_secret").(string),
 		CustomerId: d.Get("customer_id").(string),
-		ApiAddress: "https://api.rackcorp.net/api/rest/v1/json.php",
 	}
 
 	return config, nil
@@ -56,8 +53,5 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 
 type Config struct {
 	Client     api.Client
-	ApiUuid    string
-	ApiSecret  string
-	ApiAddress string
 	CustomerId string
 }
