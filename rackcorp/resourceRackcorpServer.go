@@ -153,6 +153,11 @@ func resourceRackcorpServerPopulateFromDevice(d *schema.ResourceData, config Con
 
 	device, err := config.Client.DeviceGet(deviceId)
 	if err != nil {
+		if apiErr, ok := err.(*api.ApiError); ok {
+			if apiErr.Message == "Could not find device" {
+				return newNotFoundError(apiErr.Message)
+			}
+		}
 		return errors.Wrapf(err, "Could not get Rackcorp device with id '%s'.", deviceId)
 	}
 
@@ -425,11 +430,9 @@ func resourceRackcorpServerRead(d *schema.ResourceData, meta interface{}) error 
 
 	err = resourceRackcorpServerPopulateFromDevice(d, config)
 	if err != nil {
-		if apiErr, ok := err.(*api.ApiError); ok {
-			if apiErr.Message == "Could not find device" {
-				d.SetId("")
-				return nil
-			}
+		if _, ok := err.(*NotFoundError); ok {
+			d.SetId("")
+			return nil
 		}
 		return err
 	}
