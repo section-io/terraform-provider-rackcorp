@@ -62,6 +62,7 @@ type orderCreateRequest struct {
 	request
 	ProductCode    string         `json:"productCode"`
 	CustomerId     string         `json:"customerId"`
+	Quantity       int            `json:"quantity,omitempty"`
 	ProductDetails ProductDetails `json:"productDetails"`
 }
 
