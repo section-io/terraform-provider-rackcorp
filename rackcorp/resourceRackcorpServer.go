@@ -389,7 +389,18 @@ func resourceRackcorpServerRead(d *schema.ResourceData, meta interface{}) error 
 		return err
 	}
 
-	return resourceRackcorpServerPopulateFromDevice(d, config)
+	err = resourceRackcorpServerPopulateFromDevice(d, config)
+	if err != nil {
+		if apiErr, ok := err.(*api.ApiError); ok {
+			if apiErr.Message == "Could not find device" {
+				d.SetId("")
+				return nil
+			}
+		}
+		return err
+	}
+
+	return nil
 }
 
 func resourceRackcorpServerDelete(d *schema.ResourceData, meta interface{}) error {
