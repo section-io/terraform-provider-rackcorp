@@ -12,6 +12,8 @@ resource "rackcorp_server" "example" {
   memory_gb        = 4
   root_password    = "a-secret-password"
 
+  // name = "the-hostname-from-tf"
+
   // post_install_script = "${file("a-script.sh")}"
 
   /*

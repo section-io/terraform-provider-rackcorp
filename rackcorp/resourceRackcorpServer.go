@@ -98,7 +98,8 @@ func resourceRackcorpServer() *schema.Resource {
 			},
 			"name": {
 				Type:     schema.TypeString,
-				Computed: true,
+				Optional: true,
+				ForceNew: true,
 			},
 			"primary_ip": {
 				Type:     schema.TypeString,
@@ -314,6 +315,10 @@ func resourceRackcorpServerCreate(d *schema.ResourceData, meta interface{}) erro
 		CpuCount:    d.Get("cpu_count").(int),
 		MemoryGB:    d.Get("memory_gb").(int),
 		Storage:     translateStorage(d),
+	}
+
+	if name, ok := d.GetOk("name"); ok {
+		productDetails.Hostname = name.(string)
 	}
 
 	productCode := api.GetVirtualServerProductCode(
