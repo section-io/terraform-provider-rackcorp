@@ -6,6 +6,7 @@ import (
 
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/helper/schema"
+	"github.com/hashicorp/terraform/helper/validation"
 	"github.com/pkg/errors"
 	"github.com/section-io/terraform-provider-rackcorp/rackcorp/api"
 )
@@ -18,14 +19,17 @@ func storageSchemaElement() *schema.Resource {
 				Optional: true,
 			},
 			"size_mb": {
-				Type:     schema.TypeInt,
-				Required: true,
-				// TODO ValidateFunc:
+				Type:         schema.TypeInt,
+				Required:     true,
+				ValidateFunc: validation.IntAtLeast(1),
 			},
 			"type": {
 				Type:     schema.TypeString,
 				Optional: true,
-				// TODO ValidateFunc:
+				ValidateFunc: validation.StringInSlice(
+					api.StorageTypes,
+					false,
+				),
 			},
 			"sort_order": {
 				Type:     schema.TypeInt,
@@ -50,6 +54,10 @@ func resourceRackcorpServer() *schema.Resource {
 				Type:     schema.TypeString,
 				Required: true,
 				ForceNew: true,
+				ValidateFunc: validation.StringInSlice(
+					api.ServerClasses,
+					false,
+				),
 			},
 			"operating_system": {
 				Type:     schema.TypeString,

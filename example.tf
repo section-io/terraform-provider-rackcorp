@@ -6,7 +6,7 @@ provider "rackcorp" {
 
 resource "rackcorp_server" "example" {
   country          = "the-country-from-tf"
-  server_class     = "the-server_class-from-tf"
+  server_class     = "PERFORMANCE"
   operating_system = "the-operating-system-from-tf"
   cpu_count        = 1
   memory_gb        = 4
