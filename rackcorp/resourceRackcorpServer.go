@@ -83,6 +83,7 @@ func resourceRackcorpServer() *schema.Resource {
 			"data_center_id": {
 				Type:     schema.TypeString,
 				Optional: true,
+				Computed: true,
 				ForceNew: true,
 			},
 			"traffic_gb": {
@@ -109,6 +110,7 @@ func resourceRackcorpServer() *schema.Resource {
 			"name": {
 				Type:     schema.TypeString,
 				Optional: true,
+				Computed: true,
 				ForceNew: true,
 			},
 			"primary_ip": {
@@ -165,6 +167,7 @@ func resourceRackcorpServerPopulateFromDevice(d *schema.ResourceData, config Con
 
 	panicOnError(d.Set("name", device.Name))
 	panicOnError(d.Set("primary_ip", device.PrimaryIP))
+	panicOnError(d.Set("data_center_id", device.DataCenterId))
 
 	powerSwitch := getExtraByKey("SYS_POWERSWITCH", device.Extra)
 	if powerSwitch == "ONLINE" {
