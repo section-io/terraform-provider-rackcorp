@@ -308,7 +308,10 @@ func resourceRackcorpServerCreate(d *schema.ResourceData, meta interface{}) erro
 		Storage:     translateStorage(d),
 	}
 
-	productCode := "SERVER_VIRTUAL_" + d.Get("server_class").(string) + "_" + d.Get("country").(string)
+	productCode := api.GetVirtualServerProductCode(
+		d.Get("server_class").(string),
+		d.Get("country").(string),
+	)
 
 	createdOrder, err := config.Client.OrderCreate(productCode, config.CustomerId, productDetails)
 	if err != nil {

@@ -95,6 +95,10 @@ func sliceItoa(i []int) []string {
 	return a
 }
 
+func GetVirtualServerProductCode(serverClass string, country string) string {
+	return "SERVER_VIRTUAL_" + serverClass + "_" + country
+}
+
 func (c *client) OrderConfirm(orderId string) (*ConfirmedOrder, error) {
 	if orderId == "" {
 		return nil, errors.New("orderId parameter is required.")
