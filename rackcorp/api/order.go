@@ -87,8 +87,27 @@ type orderGetResponse struct {
 }
 
 const (
+	ServerClassBudget      = "BUDGET"
+	ServerClassPerformance = "PERFORMANCE"
+	ServerClassStorage     = "STORAGE"
+	ServerClassTraffic     = "TRAFFIC"
+
 	StorageTypeMagnetic = "MAGNETIC"
 	StorageTypeSSD      = "SSD"
+)
+
+var (
+	ServerClasses = []string{
+		ServerClassBudget,
+		ServerClassPerformance,
+		ServerClassStorage,
+		ServerClassTraffic,
+	}
+
+	StorageTypes = []string{
+		StorageTypeMagnetic,
+		StorageTypeSSD,
+	}
 )
 
 func sliceItoa(i []int) []string {
