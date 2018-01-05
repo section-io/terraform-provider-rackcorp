@@ -80,6 +80,16 @@ func resourceRackcorpServer() *schema.Resource {
 				ForceNew:  true,
 				Sensitive: true,
 			},
+			"data_center_id": {
+				Type:     schema.TypeString,
+				Optional: true,
+				ForceNew: true,
+			},
+			"traffic_gb": {
+				Type:     schema.TypeInt,
+				Optional: true,
+				ForceNew: true,
+			},
 			"post_install_script": {
 				Type:     schema.TypeString,
 				Optional: true,
@@ -319,6 +329,14 @@ func resourceRackcorpServerCreate(d *schema.ResourceData, meta interface{}) erro
 
 	if name, ok := d.GetOk("name"); ok {
 		productDetails.Hostname = name.(string)
+	}
+
+	if dataCenterId, ok := d.GetOk("data_center_id"); ok {
+		productDetails.DataCenterId = dataCenterId.(string)
+	}
+
+	if trafficGB, ok := d.GetOk("traffic_gb"); ok {
+		productDetails.TrafficGB = trafficGB.(int)
 	}
 
 	productCode := api.GetVirtualServerProductCode(

@@ -12,9 +12,13 @@ resource "rackcorp_server" "example" {
   memory_gb        = 4
   root_password    = "a-secret-password"
 
+  // data_center_id = 19
+
   // name = "the-hostname-from-tf"
 
   // post_install_script = "${file("a-script.sh")}"
+
+  // traffic_gb = 10
 
   /*
   storage = [
