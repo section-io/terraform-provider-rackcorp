@@ -10,14 +10,15 @@ type DeviceExtra struct {
 }
 
 type Device struct {
-	DeviceId   string        `json:"id"`
-	Name       string        `json:"name"`
-	CustomerId string        `json:"customerId"`
-	PrimaryIP  string        `json:"primaryIP"`
-	Status     string        `json:"status"`
-	Extra      []DeviceExtra `json:"extra"`
+	DeviceId     string        `json:"id"`
+	Name         string        `json:"name"`
+	CustomerId   string        `json:"customerId"`
+	PrimaryIP    string        `json:"primaryIP"`
+	Status       string        `json:"status"`
+	Extra        []DeviceExtra `json:"extra"`
+	DataCenterId string        `json:"dcid"`
 	// TODO assets, stdName, dateCreated, dateModified, dcDescription,
-	//  dcId, cName, firewallPolicies, ips, networkRoutes, ports,
+	//  dcName, firewallPolicies, ips, networkRoutes, ports,
 	//  trafficCurrent, trafficEstimated, trafficMB, trafficShared
 }
 
