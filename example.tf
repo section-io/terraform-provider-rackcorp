@@ -39,7 +39,7 @@ resource "rackcorp_server" "example" {
   /*
   storage = [
     {
-      size_mb = 50
+      size_gb = 50
       type    = "SSD" // or MAGNETIC
     },
   ]

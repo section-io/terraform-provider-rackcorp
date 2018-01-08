@@ -8,7 +8,7 @@ import (
 
 type Storage struct {
 	Name        string `json:"name,omitempty"`
-	SizeMB      int    `json:"sizeMB"`
+	SizeGB      int    `json:"sizeGB"`
 	StorageType string `json:"type"`
 	SortOrder   int    `json:"order,omitempty"`
 }
