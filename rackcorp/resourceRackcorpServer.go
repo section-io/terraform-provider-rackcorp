@@ -39,6 +39,57 @@ func storageSchemaElement() *schema.Resource {
 	}
 }
 
+func firewallPolicySchemaElement() *schema.Resource {
+	return &schema.Resource{
+		Schema: map[string]*schema.Schema{
+			"direction": {
+				Type:     schema.TypeString,
+				Required: true,
+				ValidateFunc: validation.StringInSlice(
+					api.FirewallPolicyDirections,
+					false,
+				),
+			},
+			"policy": {
+				Type:     schema.TypeString,
+				Required: true,
+				ValidateFunc: validation.StringInSlice(
+					api.FirewallPolicyTypes,
+					false,
+				),
+			},
+			"comment": {
+				Type:     schema.TypeString,
+				Optional: true,
+			},
+			"ip_address_from": {
+				Type:     schema.TypeString,
+				Optional: true,
+			},
+			"ip_address_to": {
+				Type:     schema.TypeString,
+				Optional: true,
+			},
+			"port_from": {
+				Type:     schema.TypeString,
+				Optional: true,
+			},
+			"port_to": {
+				Type:     schema.TypeString,
+				Optional: true,
+			},
+			"protocol": {
+				Type:     schema.TypeString,
+				Optional: true,
+			},
+			"order": {
+				Type:     schema.TypeInt,
+				Required: true,
+			},
+		},
+	}
+}
+
 func resourceRackcorpServer() *schema.Resource {
 	return &schema.Resource{
 		Create: resourceRackcorpServerCreate,
@@ -102,6 +153,13 @@ func resourceRackcorpServer() *schema.Resource {
 				ForceNew: true,
 				MinItems: 1,
 				Elem:     storageSchemaElement(),
+			},
+			"firewall_policies": {
+				Type:     schema.TypeList,
+				Optional: true,
+				ForceNew: true,
+				MinItems: 1,
+				Elem:     firewallPolicySchemaElement(),
 			},
 			"device_id": {
 				Type:     schema.TypeString,
@@ -276,6 +334,51 @@ func cancelServer(deviceId string, d *schema.ResourceData, config Config) error 
 	return nil
 }
 
+func translateFirewallPolicy(d *schema.ResourceData) []api.FirewallPolicy {
+	var result []api.FirewallPolicy
+	list, ok := d.GetOk("firewall_policies")
+	if !ok {
+		return result
+	}
+
+	for _, raw := range list.([]interface{}) {
+		data := raw.(map[string]interface{})
+
+		policy := api.FirewallPolicy{
+			Direction: data["direction"].(string),
+			Policy:    data["policy"].(string),
+			Order:     data["order"].(int),
+		}
+
+		if v := data["comment"].(string); v != "" {
+			policy.Comment = v
+		}
+
+		if v := data["ip_address_from"].(string); v != "" {
+			policy.IpAddressFrom = v
+		}
+
+		if v := data["ip_address_to"].(string); v != "" {
+			policy.IpAddressTo = v
+		}
+
+		if v := data["port_from"].(string); v != "" {
+			policy.PortFrom = v
+		}
+
+		if v := data["port_to"].(string); v != "" {
+			policy.PortTo = v
+		}
+
+		if v := data["protocol"].(string); v != "" {
+			policy.Protocol = v
+		}
+		result = append(result, policy)
+	}
+
+	return result
+}
+
 func translateStorage(d *schema.ResourceData) []api.Storage {
 	var result []api.Storage
 	list, ok := d.GetOk("storage")
@@ -328,11 +431,12 @@ func resourceRackcorpServerCreate(d *schema.ResourceData, meta interface{}) erro
 	}
 
 	productDetails := api.ProductDetails{
-		Credentials: credentials,
-		Install:     install,
-		CpuCount:    d.Get("cpu_count").(int),
-		MemoryGB:    d.Get("memory_gb").(int),
-		Storage:     translateStorage(d),
+		Credentials:      credentials,
+		Install:          install,
+		CpuCount:         d.Get("cpu_count").(int),
+		MemoryGB:         d.Get("memory_gb").(int),
+		Storage:          translateStorage(d),
+		FirewallPolicies: translateFirewallPolicy(d),
 	}
 
 	if name, ok := d.GetOk("name"); ok {

@@ -12,6 +12,22 @@ resource "rackcorp_server" "example" {
   memory_gb        = 4
   root_password    = "a-secret-password"
 
+  /*
+  firewall_policies = [
+    {
+      direction       = "INBOUND"
+      policy          = "ALLOW"
+      protocol        = "TCP"
+      port_to         = "80"
+      port_from       = "80"
+      ip_address_from = "203.0.113.5"
+      ip_address_to   = "203.0.113.6"
+      comment         = "HTTP"
+      order           = 0
+    },
+  ]
+  */
+
   // data_center_id = 19
 
   // name = "the-hostname-from-tf"

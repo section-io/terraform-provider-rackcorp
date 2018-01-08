@@ -13,15 +13,28 @@ type Storage struct {
 	SortOrder   int    `json:"order,omitempty"`
 }
 
+type FirewallPolicy struct {
+	Direction     string `json:"direction"`
+	Policy        string `json:"policy"`
+	Order         int    `json:"order"`
+	Comment       string `json:"comment,omitempty"`
+	IpAddressFrom string `json:"ipAddressFrom,omitempty"`
+	IpAddressTo   string `json:"ipAddressTo,omitempty"`
+	Protocol      string `json:"protocol,omitempty"`
+	PortFrom      string `json:"portFrom,omitempty"`
+	PortTo        string `json:"portTo,omitempty"`
+}
+
 type ProductDetails struct {
-	Hostname     string       `json:"hostname,omitempty"`
-	DataCenterId string       `json:"dcId,omitempty"`
-	Credentials  []Credential `json:"credentials"`
-	Install      Install      `json:"install"`
-	CpuCount     int          `json:"cpu"`
-	Storage      []Storage    `json:"storage,omitempty"`
-	MemoryGB     int          `json:"memoryGB"`
-	TrafficGB    int          `json:"trafficGB,omitempty"`
+	Hostname         string           `json:"hostname,omitempty"`
+	DataCenterId     string           `json:"dcId,omitempty"`
+	Credentials      []Credential     `json:"credentials"`
+	Install          Install          `json:"install"`
+	CpuCount         int              `json:"cpu"`
+	Storage          []Storage        `json:"storage,omitempty"`
+	MemoryGB         int              `json:"memoryGB"`
+	TrafficGB        int              `json:"trafficGB,omitempty"`
+	FirewallPolicies []FirewallPolicy `json:"firewallPolicies,omitempty"`
 }
 
 type Install struct {
@@ -94,6 +107,15 @@ const (
 
 	StorageTypeMagnetic = "MAGNETIC"
 	StorageTypeSSD      = "SSD"
+
+	FirewallPolicyDirectionAny      = "ANY"
+	FirewallPolicyDirectionInbound  = "INBOUND"
+	FirewallPolicyDirectionOutbound = "OUTBOUND"
+
+	FirewallPolicyTypeAllow    = "ALLOW"
+	FirewallPolicyTypeDeny     = "DENY"
+	FirewallPolicyTypeDisabled = "DISABLED"
+	FirewallPolicyTypeReject   = "REJECT"
 )
 
 var (
@@ -107,6 +129,19 @@ var (
 	StorageTypes = []string{
 		StorageTypeMagnetic,
 		StorageTypeSSD,
+	}
+
+	FirewallPolicyDirections = []string{
+		FirewallPolicyDirectionAny,
+		FirewallPolicyDirectionInbound,
+		FirewallPolicyDirectionOutbound,
+	}
+
+	FirewallPolicyTypes = []string{
+		FirewallPolicyTypeAllow,
+		FirewallPolicyTypeDeny,
+		FirewallPolicyTypeDisabled,
+		FirewallPolicyTypeReject,
 	}
 )
 
