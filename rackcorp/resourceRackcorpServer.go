@@ -18,7 +18,7 @@ func storageSchemaElement() *schema.Resource {
 				Type:     schema.TypeString,
 				Optional: true,
 			},
-			"size_mb": {
+			"size_gb": {
 				Type:         schema.TypeInt,
 				Required:     true,
 				ValidateFunc: validation.IntAtLeast(1),
@@ -390,7 +390,7 @@ func translateStorage(d *schema.ResourceData) []api.Storage {
 		data := raw.(map[string]interface{})
 
 		storage := api.Storage{
-			SizeMB:      data["size_mb"].(int),
+			SizeGB:      data["size_gb"].(int),
 			StorageType: api.StorageTypeMagnetic,
 		}
 
