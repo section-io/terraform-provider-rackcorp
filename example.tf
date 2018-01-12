@@ -13,6 +13,20 @@ resource "rackcorp_server" "example" {
   root_password    = "a-secret-password"
 
   /*
+  nics = [
+    {
+      name      = "public"
+      vlan      = 1
+      speed     = 1000
+      ipv4      = 1
+      pool_ipv4 = 1
+      ipv6      = 1
+      pool_ipv6 = 1
+    },
+  ]
+  */
+
+  /*
   firewall_policies = [
     {
       direction       = "INBOUND"

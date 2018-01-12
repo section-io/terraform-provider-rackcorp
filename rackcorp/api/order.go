@@ -25,6 +25,16 @@ type FirewallPolicy struct {
 	PortTo        string `json:"portTo,omitempty"`
 }
 
+type Nic struct {
+	Name     string `json:"name,omitempty"`
+	Vlan     int    `json:"vlan,omitempty"`
+	Speed    int    `json:"speed"`
+	IPV4     int    `json:"ipv4"`
+	PoolIPv4 int    `json:"poolIPv4,omitempty"`
+	IPV6     int    `json:"ipv6,omitempty"`
+	PoolIPv6 int    `json:"poolIPv6,omitempty"`
+}
+
 type ProductDetails struct {
 	Hostname         string           `json:"hostname,omitempty"`
 	DataCenterId     string           `json:"dcId,omitempty"`
@@ -35,6 +45,7 @@ type ProductDetails struct {
 	MemoryGB         int              `json:"memoryGB"`
 	TrafficGB        int              `json:"trafficGB,omitempty"`
 	FirewallPolicies []FirewallPolicy `json:"firewallPolicies,omitempty"`
+	Nics             []Nic            `json:"nics,omitempty"`
 }
 
 type Install struct {
