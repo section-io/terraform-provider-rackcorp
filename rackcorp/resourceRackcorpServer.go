@@ -90,6 +90,41 @@ func firewallPolicySchemaElement() *schema.Resource {
 	}
 }
 
+func nicSchemaElement() *schema.Resource {
+	return &schema.Resource{
+		Schema: map[string]*schema.Schema{
+			"name": {
+				Type:     schema.TypeString,
+				Optional: true,
+			},
+			"vlan": {
+				Type:     schema.TypeInt,
+				Optional: true,
+			},
+			"speed": {
+				Type:     schema.TypeInt,
+				Required: true,
+			},
+			"ipv4": {
+				Type:     schema.TypeInt,
+				Required: true,
+			},
+			"pool_ipv4": {
+				Type:     schema.TypeInt,
+				Optional: true,
+			},
+			"ipv6": {
+				Type:     schema.TypeInt,
+				Optional: true,
+			},
+			"pool_ipv6": {
+				Type:     schema.TypeInt,
+				Optional: true,
+			},
+		},
+	}
+}
+
 func resourceRackcorpServer() *schema.Resource {
 	return &schema.Resource{
 		Create: resourceRackcorpServerCreate,
@@ -160,6 +195,13 @@ func resourceRackcorpServer() *schema.Resource {
 				ForceNew: true,
 				MinItems: 1,
 				Elem:     firewallPolicySchemaElement(),
+			},
+			"nics": {
+				Type:     schema.TypeList,
+				Optional: true,
+				ForceNew: true,
+				MinItems: 1,
+				Elem:     nicSchemaElement(),
 			},
 			"device_id": {
 				Type:     schema.TypeString,
@@ -412,6 +454,47 @@ func translateStorage(d *schema.ResourceData) []api.Storage {
 	return result
 }
 
+func translateNic(d *schema.ResourceData) []api.Nic {
+	var result []api.Nic
+	list, ok := d.GetOk("nics")
+	if !ok {
+		return result
+	}
+
+	for _, raw := range list.([]interface{}) {
+		data := raw.(map[string]interface{})
+
+		nic := api.Nic{
+			Speed: data["speed"].(int),
+			IPV4:  data["ipv4"].(int),
+		}
+
+		if v := data["name"].(string); v != "" {
+			nic.Name = v
+		}
+
+		if v := data["vlan"].(int); v != 0 {
+			nic.Vlan = v
+		}
+
+		if v := data["pool_ipv4"].(int); v != 0 {
+			nic.PoolIPv4 = v
+		}
+
+		if v := data["ipv6"].(int); v != 0 {
+			nic.IPV6 = v
+		}
+
+		if v := data["pool_ipv6"].(int); v != 0 {
+			nic.PoolIPv6 = v
+		}
+
+		result = append(result, nic)
+	}
+
+	return result
+}
+
 func resourceRackcorpServerCreate(d *schema.ResourceData, meta interface{}) error {
 	config := meta.(Config)
 
@@ -437,6 +520,7 @@ func resourceRackcorpServerCreate(d *schema.ResourceData, meta interface{}) erro
 		MemoryGB:         d.Get("memory_gb").(int),
 		Storage:          translateStorage(d),
 		FirewallPolicies: translateFirewallPolicy(d),
+		Nics:             translateNic(d),
 	}
 
 	if name, ok := d.GetOk("name"); ok {
