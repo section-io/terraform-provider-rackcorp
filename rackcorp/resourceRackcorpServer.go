@@ -349,7 +349,7 @@ func startServer(deviceId string, config Config) error {
 		return errors.Wrapf(err, "Failed to start server with device id '%s'.", deviceId)
 	}
 
-	log.Printf("[TRACE] Created transaction '%d' to start server with device id '%s'.",
+	log.Printf("[TRACE] Created transaction '%s' to start server with device id '%s'.",
 		transaction.TransactionId, deviceId)
 
 	return nil
@@ -370,7 +370,7 @@ func cancelServer(deviceId string, d *schema.ResourceData, config Config) error 
 		return errors.Wrapf(err, "Failed to cancel server with device id '%s'.", deviceId)
 	}
 
-	log.Printf("[TRACE] Created transaction '%d' to cancel server with device id '%s'.",
+	log.Printf("[TRACE] Created transaction '%s' to cancel server with device id '%s'.",
 		transaction.TransactionId, deviceId)
 
 	return nil
