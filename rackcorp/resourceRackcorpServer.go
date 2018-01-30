@@ -8,7 +8,7 @@ import (
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/terraform/helper/validation"
 	"github.com/pkg/errors"
-	"github.com/section-io/terraform-provider-rackcorp/rackcorp/api"
+	"github.com/section-io/rackcorp-sdk-go/api"
 )
 
 func storageSchemaElement() *schema.Resource {

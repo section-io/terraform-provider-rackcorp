@@ -10,6 +10,7 @@ RUN go get -u github.com/kisielk/errcheck
 RUN go get -v \
   github.com/hashicorp/terraform \
   github.com/pkg/errors \
+  github.com/section-io/rackcorp-sdk-go/api \
   github.com/stretchr/testify/assert \
   gopkg.in/h2non/gock.v1
 
