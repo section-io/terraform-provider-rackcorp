@@ -6,6 +6,7 @@ import (
 	"github.com/section-io/rackcorp-sdk-go/api"
 )
 
+// Provider returns a terraform.ResourceProvider.
 func Provider() terraform.ResourceProvider {
 	return &schema.Provider{
 		Schema: map[string]*schema.Schema{
@@ -43,15 +44,15 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 		return nil, err
 	}
 
-	config := Config{
+	config := providerConfig{
 		Client:     client,
-		CustomerId: d.Get("customer_id").(string),
+		CustomerID: d.Get("customer_id").(string),
 	}
 
 	return config, nil
 }
 
-type Config struct {
+type providerConfig struct {
 	Client     api.Client
-	CustomerId string
+	CustomerID string
 }

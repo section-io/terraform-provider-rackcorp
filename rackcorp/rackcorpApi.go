@@ -2,13 +2,13 @@ package rackcorp
 
 // TODO move these to enums in the api package
 const (
-	RackcorpApiResponseCodeOK           = "OK"
-	RackcorpApiResponseCodeAccessDenied = "ACCESS_DENIED"
-	RackcorpApiResponseCodeFault        = "FAULT"
+	rackcorpAPIResponseCodeOK           = "OK"
+	rackcorpAPIResponseCodeAccessDenied = "ACCESS_DENIED"
+	rackcorpAPIResponseCodeFault        = "FAULT"
 
-	RackcorpApiOrderStatusPending  = "PENDING"
-	RackcorpApiOrderStatusAccepted = "ACCEPTED"
+	rackcorpAPIOrderStatusPending  = "PENDING"
+	rackcorpAPIOrderStatusAccepted = "ACCEPTED"
 
-	RackcorpApiOrderContractStatusActive  = "ACTIVE"
-	RackcorpApiOrderContractStatusPending = "PENDING"
+	rackcorpAPIOrderContractStatusActive  = "ACTIVE"
+	rackcorpAPIOrderContractStatusPending = "PENDING"
 )

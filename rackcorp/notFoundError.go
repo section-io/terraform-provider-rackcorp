@@ -1,15 +1,15 @@
 package rackcorp
 
-type NotFoundError struct {
+type notFoundError struct {
 	Message string
 }
 
-func (e *NotFoundError) Error() string {
+func (e *notFoundError) Error() string {
 	return e.Message
 }
 
-func newNotFoundError(message string) *NotFoundError {
-	return &NotFoundError{
+func newNotFoundError(message string) *notFoundError {
+	return &notFoundError{
 		Message: message,
 	}
 }

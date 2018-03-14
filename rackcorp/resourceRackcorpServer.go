@@ -245,22 +245,22 @@ func resourceRackcorpServer() *schema.Resource {
 	}
 }
 
-func resourceRackcorpServerPopulateFromDevice(d *schema.ResourceData, config Config) error {
-	deviceId := d.Get("device_id").(string)
-	log.Printf("[TRACE] Rackcorp device id '%s'", deviceId)
+func resourceRackcorpServerPopulateFromDevice(d *schema.ResourceData, config providerConfig) error {
+	deviceID := d.Get("device_id").(string)
+	log.Printf("[TRACE] Rackcorp device id '%s'", deviceID)
 
-	if deviceId == "" {
+	if deviceID == "" {
 		return nil
 	}
 
-	device, err := config.Client.DeviceGet(deviceId)
+	device, err := config.Client.DeviceGet(deviceID)
 	if err != nil {
 		if apiErr, ok := err.(*api.ApiError); ok {
 			if apiErr.Message == "Could not find device" {
 				return newNotFoundError(apiErr.Message)
 			}
 		}
-		return errors.Wrapf(err, "Could not get Rackcorp device with id '%s'.", deviceId)
+		return errors.Wrapf(err, "Could not get Rackcorp device with id '%s'.", deviceID)
 	}
 
 	log.Printf("[DEBUG] Rackcorp device: %#v", device)
@@ -282,17 +282,17 @@ func resourceRackcorpServerPopulateFromDevice(d *schema.ResourceData, config Con
 	return nil
 }
 
-func resourceRackcorpServerPopulateFromContract(d *schema.ResourceData, config Config) error {
-	contractId := d.Get("contract_id").(string)
-	log.Printf("[TRACE] Rackcorp contract id '%s'", contractId)
+func resourceRackcorpServerPopulateFromContract(d *schema.ResourceData, config providerConfig) error {
+	contractID := d.Get("contract_id").(string)
+	log.Printf("[TRACE] Rackcorp contract id '%s'", contractID)
 
-	if contractId == "" {
+	if contractID == "" {
 		return nil
 	}
 
-	contract, err := config.Client.OrderContractGet(contractId)
+	contract, err := config.Client.OrderContractGet(contractID)
 	if err != nil {
-		return errors.Wrapf(err, "Could not get Rackcorp contract with id '%s'.", contractId)
+		return errors.Wrapf(err, "Could not get Rackcorp contract with id '%s'.", contractID)
 	}
 
 	log.Printf("[DEBUG] Rackcorp contract: %#v", contract)
@@ -303,17 +303,17 @@ func resourceRackcorpServerPopulateFromContract(d *schema.ResourceData, config C
 	return nil
 }
 
-func resourceRackcorpServerPopulateFromTransaction(d *schema.ResourceData, config Config) error {
-	cancelTransactionId := d.Get("device_cancel_transaction_id").(string)
-	log.Printf("[TRACE] Rackcorp TransactionId id '%s'.", cancelTransactionId)
+func resourceRackcorpServerPopulateFromTransaction(d *schema.ResourceData, config providerConfig) error {
+	cancelTransactionID := d.Get("device_cancel_transaction_id").(string)
+	log.Printf("[TRACE] Rackcorp TransactionId id '%s'.", cancelTransactionID)
 
-	if cancelTransactionId == "" {
+	if cancelTransactionID == "" {
 		return nil
 	}
 
-	transaction, err := config.Client.TransactionGet(cancelTransactionId)
+	transaction, err := config.Client.TransactionGet(cancelTransactionID)
 	if err != nil {
-		return errors.Wrapf(err, "Could not get Rackcorp transaction with id '%s'.", cancelTransactionId)
+		return errors.Wrapf(err, "Could not get Rackcorp transaction with id '%s'.", cancelTransactionID)
 	}
 
 	log.Printf("[DEBUG] Rackcorp transaction: %#v", transaction)
@@ -338,28 +338,28 @@ func getExtraByKey(key string, extras []api.DeviceExtra) string {
 	return ""
 }
 
-func startServer(deviceId string, config Config) error {
+func startServer(deviceID string, config providerConfig) error {
 	transaction, err := config.Client.TransactionCreate(
 		api.TransactionTypeStartup,
 		api.TransactionObjectTypeDevice,
-		deviceId,
+		deviceID,
 		false)
 
 	if err != nil {
-		return errors.Wrapf(err, "Failed to start server with device id '%s'.", deviceId)
+		return errors.Wrapf(err, "Failed to start server with device id '%s'.", deviceID)
 	}
 
 	log.Printf("[TRACE] Created transaction '%s' to start server with device id '%s'.",
-		transaction.TransactionId, deviceId)
+		transaction.TransactionId, deviceID)
 
 	return nil
 }
 
-func cancelServer(deviceId string, d *schema.ResourceData, config Config) error {
+func cancelServer(deviceID string, d *schema.ResourceData, config providerConfig) error {
 	transaction, err := config.Client.TransactionCreate(
 		api.TransactionTypeCancel,
 		api.TransactionObjectTypeDevice,
-		deviceId,
+		deviceID,
 		true)
 
 	panicOnError(d.Set("device_cancel_transaction_id", transaction.TransactionId))
@@ -367,11 +367,11 @@ func cancelServer(deviceId string, d *schema.ResourceData, config Config) error 
 	err = waitForTransactionAttribute(d, config, "device_cancel_transaction_status", "COMPLETED", []string{"PENDING", "COMMENCED"})
 
 	if err != nil {
-		return errors.Wrapf(err, "Failed to cancel server with device id '%s'.", deviceId)
+		return errors.Wrapf(err, "Failed to cancel server with device id '%s'.", deviceID)
 	}
 
 	log.Printf("[TRACE] Created transaction '%s' to cancel server with device id '%s'.",
-		transaction.TransactionId, deviceId)
+		transaction.TransactionId, deviceID)
 
 	return nil
 }
@@ -496,7 +496,7 @@ func translateNic(d *schema.ResourceData) []api.Nic {
 }
 
 func resourceRackcorpServerCreate(d *schema.ResourceData, meta interface{}) error {
-	config := meta.(Config)
+	config := meta.(providerConfig)
 
 	credentials := []api.Credential{
 		{
@@ -527,8 +527,8 @@ func resourceRackcorpServerCreate(d *schema.ResourceData, meta interface{}) erro
 		productDetails.Hostname = name.(string)
 	}
 
-	if dataCenterId, ok := d.GetOk("data_center_id"); ok {
-		productDetails.DataCenterId = dataCenterId.(string)
+	if dataCenterID, ok := d.GetOk("data_center_id"); ok {
+		productDetails.DataCenterId = dataCenterID.(string)
 	}
 
 	if trafficGB, ok := d.GetOk("traffic_gb"); ok {
@@ -540,40 +540,40 @@ func resourceRackcorpServerCreate(d *schema.ResourceData, meta interface{}) erro
 		d.Get("country").(string),
 	)
 
-	createdOrder, err := config.Client.OrderCreate(productCode, config.CustomerId, productDetails)
+	createdOrder, err := config.Client.OrderCreate(productCode, config.CustomerID, productDetails)
 	if err != nil {
 		return errors.Wrap(err, "Rackcorp order create request failed.")
 	}
 
-	orderId := createdOrder.OrderId
-	confirmedOrder, err := config.Client.OrderConfirm(orderId)
+	orderID := createdOrder.OrderId
+	confirmedOrder, err := config.Client.OrderConfirm(orderID)
 	if err != nil {
-		return errors.Wrapf(err, "Failed to confirm Rackcorp server order '%s'.", orderId)
+		return errors.Wrapf(err, "Failed to confirm Rackcorp server order '%s'.", orderID)
 	}
 
-	d.SetId(orderId)
+	d.SetId(orderID)
 
 	contractCount := len(confirmedOrder.ContractIds)
 	if contractCount != 1 {
-		return errors.Errorf("Expected one Rackcorp contract for order '%s' but received %d", orderId, contractCount)
+		return errors.Errorf("Expected one Rackcorp contract for order '%s' but received %d", orderID, contractCount)
 	}
 
-	contractId := confirmedOrder.ContractIds[0]
+	contractID := confirmedOrder.ContractIds[0]
 
-	panicOnError(d.Set("contract_id", contractId))
+	panicOnError(d.Set("contract_id", contractID))
 
 	err = waitForContractStatus(d, config, "ACTIVE", []string{"PENDING"})
 	if err != nil {
 		return errors.Wrap(err, "Error waiting for Rackcorp contract status to be ACTIVE")
 	}
 
-	deviceId := d.Get("device_id").(string)
-	err = waitForPendingDeviceTransactions(deviceId, config)
+	deviceID := d.Get("device_id").(string)
+	err = waitForPendingDeviceTransactions(deviceID, config)
 	if err != nil {
 		return errors.Wrap(err, "Error waiting for Rackcorp device transactions to complete")
 	}
 
-	err = startServer(deviceId, config)
+	err = startServer(deviceID, config)
 	if err != nil {
 		return err
 	}
@@ -594,25 +594,25 @@ func panicOnError(err error) {
 }
 
 func resourceRackcorpServerRead(d *schema.ResourceData, meta interface{}) error {
-	orderId := d.Id()
-	if orderId == "" {
+	orderID := d.Id()
+	if orderID == "" {
 		return errors.Errorf("Missing resource id.")
 	}
 
-	config := meta.(Config)
+	config := meta.(providerConfig)
 
-	order, err := config.Client.OrderGet(orderId)
+	order, err := config.Client.OrderGet(orderID)
 	if err != nil {
-		return errors.Wrapf(err, "Error retrieving Rackcorp order '%s'.", orderId)
+		return errors.Wrapf(err, "Error retrieving Rackcorp order '%s'.", orderID)
 	}
 
-	contractId := order.ContractId
-	if contractId == "" {
-		log.Printf("[WARN] Rackcorp order '%s' not found.", orderId)
+	contractID := order.ContractId
+	if contractID == "" {
+		log.Printf("[WARN] Rackcorp order '%s' not found.", orderID)
 		d.SetId("")
 		return nil
 	}
-	panicOnError(d.Set("contract_id", contractId))
+	panicOnError(d.Set("contract_id", contractID))
 
 	err = resourceRackcorpServerPopulateFromContract(d, config)
 	if err != nil {
@@ -621,7 +621,7 @@ func resourceRackcorpServerRead(d *schema.ResourceData, meta interface{}) error 
 
 	err = resourceRackcorpServerPopulateFromDevice(d, config)
 	if err != nil {
-		if _, ok := err.(*NotFoundError); ok {
+		if _, ok := err.(*notFoundError); ok {
 			d.SetId("")
 			return nil
 		}
@@ -632,16 +632,16 @@ func resourceRackcorpServerRead(d *schema.ResourceData, meta interface{}) error 
 }
 
 func resourceRackcorpServerDelete(d *schema.ResourceData, meta interface{}) error {
-	config := meta.(Config)
-	deviceId := d.Get("device_id").(string)
-	err := cancelServer(deviceId, d, config)
+	config := meta.(providerConfig)
+	deviceID := d.Get("device_id").(string)
+	err := cancelServer(deviceID, d, config)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func waitForContractStatus(d *schema.ResourceData, config Config, targetStatus string, pendingStatuses []string) error {
+func waitForContractStatus(d *schema.ResourceData, config providerConfig, targetStatus string, pendingStatuses []string) error {
 	log.Printf(
 		"[INFO] Waiting for contract to have Status of %s",
 		targetStatus)
@@ -659,7 +659,7 @@ func waitForContractStatus(d *schema.ResourceData, config Config, targetStatus s
 	return err
 }
 
-func newContractStatusRefreshFunc(d *schema.ResourceData, config Config) resource.StateRefreshFunc {
+func newContractStatusRefreshFunc(d *schema.ResourceData, config providerConfig) resource.StateRefreshFunc {
 	return func() (interface{}, string, error) {
 		err := resourceRackcorpServerPopulateFromContract(d, config)
 		if err != nil {
@@ -675,7 +675,7 @@ func newContractStatusRefreshFunc(d *schema.ResourceData, config Config) resourc
 }
 
 func waitForDeviceAttribute(
-	d *schema.ResourceData, config Config, attribute string, target string, pending []string) error {
+	d *schema.ResourceData, config providerConfig, attribute string, target string, pending []string) error {
 
 	log.Printf(
 		"[INFO] Waiting for device to have %s of %s",
@@ -694,7 +694,7 @@ func waitForDeviceAttribute(
 	return err
 }
 
-func newDeviceStateRefreshFunc(d *schema.ResourceData, config Config, attribute string) resource.StateRefreshFunc {
+func newDeviceStateRefreshFunc(d *schema.ResourceData, config providerConfig, attribute string) resource.StateRefreshFunc {
 	return func() (interface{}, string, error) {
 
 		err := resourceRackcorpServerPopulateFromDevice(d, config)
@@ -711,7 +711,7 @@ func newDeviceStateRefreshFunc(d *schema.ResourceData, config Config, attribute 
 }
 
 func waitForTransactionAttribute(
-	d *schema.ResourceData, config Config, attribute string, target string, pending []string) error {
+	d *schema.ResourceData, config providerConfig, attribute string, target string, pending []string) error {
 
 	log.Printf(
 		"[INFO] Waiting for transaction to have %s of %s",
@@ -730,7 +730,7 @@ func waitForTransactionAttribute(
 	return err
 }
 
-func newTransactionStateRefreshFunc(d *schema.ResourceData, config Config, attribute string) resource.StateRefreshFunc {
+func newTransactionStateRefreshFunc(d *schema.ResourceData, config providerConfig, attribute string) resource.StateRefreshFunc {
 	return func() (interface{}, string, error) {
 
 		err := resourceRackcorpServerPopulateFromTransaction(d, config)
@@ -746,11 +746,11 @@ func newTransactionStateRefreshFunc(d *schema.ResourceData, config Config, attri
 	}
 }
 
-func waitForPendingDeviceTransactions(deviceId string, config Config) error {
+func waitForPendingDeviceTransactions(deviceID string, config providerConfig) error {
 	stateConf := &resource.StateChangeConf{
 		Pending:    []string{api.TransactionStatusPending},
 		Target:     []string{api.TransactionStatusCompleted},
-		Refresh:    newPendingTransactionsRefreshFunc(deviceId, config),
+		Refresh:    newPendingTransactionsRefreshFunc(deviceID, config),
 		Timeout:    60 * time.Minute,
 		Delay:      10 * time.Second,
 		MinTimeout: 3 * time.Second,
@@ -760,11 +760,11 @@ func waitForPendingDeviceTransactions(deviceId string, config Config) error {
 	return err
 }
 
-func newPendingTransactionsRefreshFunc(deviceId string, config Config) resource.StateRefreshFunc {
+func newPendingTransactionsRefreshFunc(deviceID string, config providerConfig) resource.StateRefreshFunc {
 	var dummyResource struct{}
 	filter := api.TransactionFilter{
 		ObjectType:   api.TransactionObjectTypeDevice,
-		ObjectId:     []string{deviceId},
+		ObjectId:     []string{deviceID},
 		Status:       []string{api.TransactionStatusPending, api.TransactionStatusCommenced},
 		ResultWindow: 1,
 	}
