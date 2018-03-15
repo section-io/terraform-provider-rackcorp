@@ -241,6 +241,11 @@ func resourceRackcorpServer() *schema.Resource {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
+			"host_group_id": {
+				Type:     schema.TypeInt,
+				Optional: true,
+				ForceNew: true,
+			},
 		},
 	}
 }
@@ -533,6 +538,12 @@ func resourceRackcorpServerCreate(d *schema.ResourceData, meta interface{}) erro
 
 	if trafficGB, ok := d.GetOk("traffic_gb"); ok {
 		productDetails.TrafficGB = trafficGB.(int)
+	}
+
+	if hostGroupID, ok := d.GetOk("host_group_id"); ok {
+		// Required due to omitempty int handling in json serialiser
+		productDetails.HostGroupID = new(int)
+		*productDetails.HostGroupID = hostGroupID.(int)
 	}
 
 	productCode := api.GetVirtualServerProductCode(
