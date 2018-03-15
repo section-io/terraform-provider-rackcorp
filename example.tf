@@ -50,6 +50,8 @@ resource "rackcorp_server" "example" {
 
   // traffic_gb = 10
 
+  // host_group_id = 5
+
   /*
   storage = [
     {
