@@ -26,6 +26,7 @@ resource "rackcorp_server" "example" {
   ]
   */
 
+
   /*
   firewall_policies = [
     {
@@ -42,13 +43,19 @@ resource "rackcorp_server" "example" {
   ]
   */
 
+
   // data_center_id = 19
+
 
   // name = "the-hostname-from-tf"
 
+
   // post_install_script = "${file("a-script.sh")}"
 
+
   // traffic_gb = 10
+
+  // host_group_id = 5
 
   /*
   storage = [

@@ -12,6 +12,7 @@ RUN go get -v \
   github.com/pkg/errors \
   github.com/section-io/rackcorp-sdk-go/api \
   github.com/stretchr/testify/assert \
+  golang.org/x/lint/golint \
   gopkg.in/h2non/gock.v1
 
 RUN mkdir -p /go/src/github.com/section-io/ && \
@@ -22,6 +23,7 @@ COPY rackcorp /go/src/app/rackcorp
 
 RUN gofmt -e -s -d /go/src/app 2>&1 | tee /gofmt.out && test ! -s /gofmt.out
 RUN go tool vet /go/src/app
+RUN golint -set_exit_status ./...
 RUN errcheck ./...
 
 RUN go-wrapper install
