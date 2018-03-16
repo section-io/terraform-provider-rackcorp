@@ -4,10 +4,9 @@ ENV CGO_ENABLED=0
 
 WORKDIR /go/src/app
 
-RUN go get -u github.com/kisielk/errcheck
-
 # explicitly install dependencies to improve Docker re-build times
 RUN go get -v \
+  github.com/kisielk/errcheck \
   github.com/hashicorp/terraform \
   github.com/pkg/errors \
   github.com/section-io/rackcorp-sdk-go/api \
