@@ -14,6 +14,9 @@ RUN go get -v \
   golang.org/x/lint/golint \
   gopkg.in/h2non/gock.v1
 
+# Use specific version of terraform
+RUN cd /go/src/github.com/hashicorp/terraform && git fetch origin v0.11.1 --depth=1 && git reset --hard v0.11.1 
+
 RUN mkdir -p /go/src/github.com/section-io/ && \
   ln -s /go/src/app /go/src/github.com/section-io/terraform-provider-rackcorp
 
