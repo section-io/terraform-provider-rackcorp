@@ -4,10 +4,9 @@ ENV CGO_ENABLED=0
 
 WORKDIR /go/src/app
 
-RUN go get -u github.com/kisielk/errcheck
-
 # explicitly install dependencies to improve Docker re-build times
 RUN go get -v \
+  github.com/kisielk/errcheck \
   github.com/hashicorp/terraform \
   github.com/pkg/errors \
   github.com/section-io/rackcorp-sdk-go/api \
@@ -15,11 +14,22 @@ RUN go get -v \
   golang.org/x/lint/golint \
   gopkg.in/h2non/gock.v1
 
+# Use specific version of terraform
+RUN cd /go/src/github.com/hashicorp/terraform && git fetch origin v0.11.1 --depth=1 && git reset --hard v0.11.1 
+
 RUN mkdir -p /go/src/github.com/section-io/ && \
   ln -s /go/src/app /go/src/github.com/section-io/terraform-provider-rackcorp
 
 COPY *.go /go/src/app/
 COPY rackcorp /go/src/app/rackcorp
+
+# Capture dependency versions
+RUN cd /go/src/github.com/section-io/terraform-provider-rackcorp && \
+  go list -f '{{ join .Imports "\n" }}' ./... \
+  | xargs --max-lines=1 -I % go list -f '{{ .Dir }}' % \
+  | xargs --max-lines=1 -I % bash -c 'cd %; git rev-parse --show-toplevel 2>/dev/null || true ' \
+  | sort | uniq \
+  | xargs --max-lines=1 -I % bash -c 'cd %; echo $(git rev-parse HEAD) %'
 
 RUN gofmt -e -s -d /go/src/app 2>&1 | tee /gofmt.out && test ! -s /gofmt.out
 RUN go tool vet /go/src/app
