@@ -21,6 +21,14 @@ RUN mkdir -p /go/src/github.com/section-io/ && \
 COPY *.go /go/src/app/
 COPY rackcorp /go/src/app/rackcorp
 
+# Capture dependency versions
+RUN cd /go/src/github.com/section-io/terraform-provider-rackcorp && \
+  go list -f '{{ join .Imports "\n" }}' ./... \
+  | xargs --max-lines=1 -I % go list -f '{{ .Dir }}' % \
+  | xargs --max-lines=1 -I % bash -c 'cd %; git rev-parse --show-toplevel 2>/dev/null || true ' \
+  | sort | uniq \
+  | xargs --max-lines=1 -I % bash -c 'cd %; echo $(git rev-parse HEAD) %'
+
 RUN gofmt -e -s -d /go/src/app 2>&1 | tee /gofmt.out && test ! -s /gofmt.out
 RUN go tool vet /go/src/app
 RUN golint -set_exit_status ./...
