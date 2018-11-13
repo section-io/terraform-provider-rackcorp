@@ -3,6 +3,7 @@ package rackcorp
 import (
 	"log"
 	"time"
+	"strconv"
 
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/helper/schema"
@@ -42,6 +43,10 @@ func storageSchemaElement() *schema.Resource {
 func firewallPolicySchemaElement() *schema.Resource {
 	return &schema.Resource{
 		Schema: map[string]*schema.Schema{
+			"id": {
+				Type:     schema.TypeInt,
+				Computed: true,
+			},
 			"direction": {
 				Type:     schema.TypeString,
 				Required: true,
@@ -130,6 +135,7 @@ func resourceRackcorpServer() *schema.Resource {
 		Create: resourceRackcorpServerCreate,
 		Delete: resourceRackcorpServerDelete,
 		Read:   resourceRackcorpServerRead,
+		Update: resourceRackcorpServerUpdate,
 		Schema: map[string]*schema.Schema{
 			"country": {
 				Type:     schema.TypeString,
@@ -167,7 +173,7 @@ func resourceRackcorpServer() *schema.Resource {
 				Sensitive: true,
 			},
 			"data_center_id": {
-				Type:     schema.TypeString,
+				Type:     schema.TypeInt,
 				Optional: true,
 				Computed: true,
 				ForceNew: true,
@@ -192,7 +198,7 @@ func resourceRackcorpServer() *schema.Resource {
 			"firewall_policies": {
 				Type:     schema.TypeList,
 				Optional: true,
-				ForceNew: true,
+				ForceNew: false,
 				MinItems: 1,
 				Elem:     firewallPolicySchemaElement(),
 			},
@@ -204,7 +210,7 @@ func resourceRackcorpServer() *schema.Resource {
 				Elem:     nicSchemaElement(),
 			},
 			"device_id": {
-				Type:     schema.TypeString,
+				Type:     schema.TypeInt,
 				Computed: true,
 			},
 			"name": {
@@ -251,10 +257,10 @@ func resourceRackcorpServer() *schema.Resource {
 }
 
 func resourceRackcorpServerPopulateFromDevice(d *schema.ResourceData, config providerConfig) error {
-	deviceID := d.Get("device_id").(string)
-	log.Printf("[TRACE] Rackcorp device id '%s'", deviceID)
+	deviceID := d.Get("device_id").(int)
+	log.Printf("[TRACE] Rackcorp device id '%d'", deviceID)
 
-	if deviceID == "" {
+	if deviceID == 0 {
 		return nil
 	}
 
@@ -265,7 +271,7 @@ func resourceRackcorpServerPopulateFromDevice(d *schema.ResourceData, config pro
 				return newNotFoundError(apiErr.Message)
 			}
 		}
-		return errors.Wrapf(err, "Could not get Rackcorp device with id '%s'.", deviceID)
+		return errors.Wrapf(err, "Could not get Rackcorp device with id '%d'.", deviceID)
 	}
 
 	log.Printf("[DEBUG] Rackcorp device: %#v", device)
@@ -273,6 +279,7 @@ func resourceRackcorpServerPopulateFromDevice(d *schema.ResourceData, config pro
 	panicOnError(d.Set("name", device.Name))
 	panicOnError(d.Set("primary_ip", device.PrimaryIP))
 	panicOnError(d.Set("data_center_id", device.DataCenterId))
+	panicOnError(d.Set("firewall_policies",  convertFirewallToMap(device.FirewallPolicies)))
 
 	powerSwitch := getExtraByKey("SYS_POWERSWITCH", device.Extra)
 	if powerSwitch == "ONLINE" {
@@ -285,6 +292,26 @@ func resourceRackcorpServerPopulateFromDevice(d *schema.ResourceData, config pro
 	}
 
 	return nil
+}
+
+func convertFirewallToMap(fwList []api.FirewallPolicy) []map[string]interface{} {
+	resultList := []map[string]interface{}{}
+	for _, v := range fwList {
+		item := map[string]interface{}{}
+		item["id"] = v.ID
+		item["direction"] = v.Direction
+		item["policy"] = v.Policy
+		item["protocol"] = v.Protocol
+		item["port_to"] = v.PortTo
+		item["port_from"] = v.PortFrom
+		item["ip_address_to"] = v.IpAddressTo
+		item["ip_address_from"] = v.IpAddressFrom
+		item["comment"] = v.Comment
+		item["order"] = v.Order
+		//TODO add the rest of the properties here and elsewhere in the provider
+		resultList = append(resultList, item)
+	}
+	return resultList
 }
 
 func resourceRackcorpServerPopulateFromContract(d *schema.ResourceData, config providerConfig) error {
@@ -303,7 +330,13 @@ func resourceRackcorpServerPopulateFromContract(d *schema.ResourceData, config p
 	log.Printf("[DEBUG] Rackcorp contract: %#v", contract)
 
 	panicOnError(d.Set("contract_status", contract.Status))
-	panicOnError(d.Set("device_id", contract.DeviceId))
+	if(contract.DeviceId != "") { // DeviceId can be blank for pending contracts
+		intID, err := strconv.Atoi(contract.DeviceId)
+		if err != nil {
+			return errors.Wrap(err, "Could not get Rackcorp contract device ID as integer'.")
+		}
+		panicOnError(d.Set("device_id", intID))
+	}
 
 	return nil
 }
@@ -343,11 +376,12 @@ func getExtraByKey(key string, extras []api.DeviceExtra) string {
 	return ""
 }
 
-func startServer(deviceID string, config providerConfig) error {
+func startServer(deviceID int, config providerConfig) error {
+	stringID := strconv.Itoa(deviceID);
 	transaction, err := config.Client.TransactionCreate(
 		api.TransactionTypeStartup,
 		api.TransactionObjectTypeDevice,
-		deviceID,
+		stringID,
 		false)
 
 	if err != nil {
@@ -360,11 +394,12 @@ func startServer(deviceID string, config providerConfig) error {
 	return nil
 }
 
-func cancelServer(deviceID string, d *schema.ResourceData, config providerConfig) error {
+func cancelServer(deviceID int, d *schema.ResourceData, config providerConfig) error {
+	stringID := strconv.Itoa(deviceID);
 	transaction, err := config.Client.TransactionCreate(
 		api.TransactionTypeCancel,
 		api.TransactionObjectTypeDevice,
-		deviceID,
+		stringID,
 		true)
 
 	panicOnError(d.Set("device_cancel_transaction_id", transaction.TransactionId))
@@ -387,14 +422,27 @@ func translateFirewallPolicy(d *schema.ResourceData) []api.FirewallPolicy {
 	if !ok {
 		return result
 	}
+	return parseFirewallPolicies(list.([]interface{}))
+}
 
-	for _, raw := range list.([]interface{}) {
+func parseFirewallPolicies(list []interface{}) []api.FirewallPolicy {
+	var result []api.FirewallPolicy
+
+	for _, raw := range list {
 		data := raw.(map[string]interface{})
 
 		policy := api.FirewallPolicy{
 			Direction: data["direction"].(string),
 			Policy:    data["policy"].(string),
 			Order:     data["order"].(int),
+		}
+
+		if v := data["id"].(int); v != 0 {
+			policy.ID = v
+		}
+
+		if v := data["direction"].(string); v != "" {
+			policy.Direction = v
 		}
 
 		if v := data["comment"].(string); v != "" {
@@ -578,7 +626,7 @@ func resourceRackcorpServerCreate(d *schema.ResourceData, meta interface{}) erro
 		return errors.Wrap(err, "Error waiting for Rackcorp contract status to be ACTIVE")
 	}
 
-	deviceID := d.Get("device_id").(string)
+	deviceID := d.Get("device_id").(int)
 	err = waitForPendingDeviceTransactions(deviceID, config)
 	if err != nil {
 		return errors.Wrap(err, "Error waiting for Rackcorp device transactions to complete")
@@ -642,9 +690,60 @@ func resourceRackcorpServerRead(d *schema.ResourceData, meta interface{}) error 
 	return nil
 }
 
+func resourceRackcorpServerUpdate(d *schema.ResourceData, meta interface{}) error {
+	log.Print("[INFO] Updating the server(s), only firewall policies are updateable in this version")
+	config := meta.(providerConfig)
+
+	d.Partial(true)
+	if d.HasChange("firewall_policies") {
+		old, new := d.GetChange("firewall_policies");
+		newPolicies := parseFirewallPolicies(new.([]interface{}))
+		oldPolicies := parseFirewallPolicies(old.([]interface{}))
+		requestPolicies := []api.FirewallPolicy{}
+		for _, newPolicy := range newPolicies {
+			if !arrayContains(oldPolicies, newPolicy) {
+				//add the policy because it is not in the old list
+				requestPolicies = append(requestPolicies, newPolicy)
+			}
+		}
+
+		for _, oldPolicy := range oldPolicies {
+			if !arrayContains(newPolicies, oldPolicy) {
+				//delete the policy since its not in the new list
+				oldPolicy.Policy = "DELETED"
+				requestPolicies = append(requestPolicies, oldPolicy)
+			}
+		}
+		deviceID := d.Get("device_id").(int)
+		err := config.Client.DeviceUpdateFirewall(deviceID, requestPolicies)
+		if err != nil {
+			log.Println("[INFO] #### ERROR on update request")
+			return err
+		}
+		d.SetPartial("firewall_policies")
+		resourceRackcorpServerPopulateFromDevice(d, config)
+	}
+	d.Partial(false)
+	return nil
+}
+
+func arrayContains(arr []api.FirewallPolicy, item api.FirewallPolicy) bool {
+	for _, thing := range arr {
+		if isFirewallSame(thing, item) {return true}
+	}
+	return false
+}
+
+func isFirewallSame(first, second api.FirewallPolicy) bool {
+	test1 := first.Direction == second.Direction && first.Policy == second.Policy && first.Protocol == second.Protocol
+	test2 := first.PortTo == second.PortTo && first.Order == second.Order && first.Comment == second.Comment
+	test3 := first.IpAddressFrom == second.IpAddressFrom
+	return test1 && test2 && test3
+}
+
 func resourceRackcorpServerDelete(d *schema.ResourceData, meta interface{}) error {
 	config := meta.(providerConfig)
-	deviceID := d.Get("device_id").(string)
+	deviceID := d.Get("device_id").(int)
 	err := cancelServer(deviceID, d, config)
 	if err != nil {
 		return err
@@ -757,7 +856,7 @@ func newTransactionStateRefreshFunc(d *schema.ResourceData, config providerConfi
 	}
 }
 
-func waitForPendingDeviceTransactions(deviceID string, config providerConfig) error {
+func waitForPendingDeviceTransactions(deviceID int, config providerConfig) error {
 	stateConf := &resource.StateChangeConf{
 		Pending:    []string{api.TransactionStatusPending},
 		Target:     []string{api.TransactionStatusCompleted},
@@ -771,11 +870,12 @@ func waitForPendingDeviceTransactions(deviceID string, config providerConfig) er
 	return err
 }
 
-func newPendingTransactionsRefreshFunc(deviceID string, config providerConfig) resource.StateRefreshFunc {
+func newPendingTransactionsRefreshFunc(deviceID int, config providerConfig) resource.StateRefreshFunc {
 	var dummyResource struct{}
+	stringID := strconv.Itoa(deviceID)
 	filter := api.TransactionFilter{
 		ObjectType:   api.TransactionObjectTypeDevice,
-		ObjectId:     []string{deviceID},
+		ObjectId:     []string{stringID},
 		Status:       []string{api.TransactionStatusPending, api.TransactionStatusCommenced},
 		ResultWindow: 1,
 	}
