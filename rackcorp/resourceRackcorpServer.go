@@ -294,8 +294,8 @@ func resourceRackcorpServerPopulateFromDevice(d *schema.ResourceData, config pro
 	return nil
 }
 
-func convertFirewallToMap(fwList []api.FirewallPolicy) []map[string]interface{} {
-	resultList := []map[string]interface{}{}
+func convertFirewallToMap(fwList []api.FirewallPolicy) *schema.Set {
+	resultList := schema.NewSet(schema.HashResource(firewallPolicySchemaElement()), []interface{}{})
 	for _, v := range fwList {
 		item := map[string]interface{}{}
 		item["id"] = v.ID
@@ -309,7 +309,7 @@ func convertFirewallToMap(fwList []api.FirewallPolicy) []map[string]interface{} 
 		item["comment"] = v.Comment
 		item["order"] = v.Order
 		//TODO add the rest of the properties here and elsewhere in the provider
-		resultList = append(resultList, item)
+		resultList.Add(item)
 	}
 	return resultList
 }
@@ -694,6 +694,15 @@ func resourceRackcorpServerRead(d *schema.ResourceData, meta interface{}) error 
 	return nil
 }
 
+func convertFirewallPoliciesToSlice(firewallPol interface{}) []interface{} {
+	asSet, ok := firewallPol.(*schema.Set)
+	if !ok {
+		panic(errors.New("Error casing firewall policies to schema.Set type"))
+	}
+	asList := (*asSet).List()
+	return asList
+}
+
 func resourceRackcorpServerUpdate(d *schema.ResourceData, meta interface{}) error {
 	log.Print("[INFO] Updating the server(s), only firewall policies are updateable in this version")
 	config := meta.(providerConfig)
@@ -701,8 +710,8 @@ func resourceRackcorpServerUpdate(d *schema.ResourceData, meta interface{}) erro
 	d.Partial(true)
 	if d.HasChange("firewall_policies") {
 		old, new := d.GetChange("firewall_policies");
-		newPolicies := parseFirewallPolicies(new.([]interface{}))
-		oldPolicies := parseFirewallPolicies(old.([]interface{}))
+		newPolicies := parseFirewallPolicies(convertFirewallPoliciesToSlice(new))
+		oldPolicies := parseFirewallPolicies(convertFirewallPoliciesToSlice(old))
 		requestPolicies := []api.FirewallPolicy{}
 		for _, newPolicy := range newPolicies {
 			if !arrayContains(oldPolicies, newPolicy) {
