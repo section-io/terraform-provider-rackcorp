@@ -196,7 +196,7 @@ func resourceRackcorpServer() *schema.Resource {
 				Elem:     storageSchemaElement(),
 			},
 			"firewall_policies": {
-				Type:     schema.TypeList,
+				Type:     schema.TypeSet,
 				Optional: true,
 				ForceNew: false,
 				MinItems: 1,
