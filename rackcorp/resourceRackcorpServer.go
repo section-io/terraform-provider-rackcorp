@@ -422,7 +422,11 @@ func translateFirewallPolicy(d *schema.ResourceData) []api.FirewallPolicy {
 	if !ok {
 		return result
 	}
-	return parseFirewallPolicies(list.([]interface{}))
+	schemaList, ok := list.(*schema.Set)
+	if !ok {
+		panic(errors.New("Error casing firewall policies to schema.Set type"))
+	}
+	return parseFirewallPolicies((*schemaList).List())
 }
 
 func parseFirewallPolicies(list []interface{}) []api.FirewallPolicy {
