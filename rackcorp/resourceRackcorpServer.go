@@ -385,10 +385,10 @@ func startServer(deviceID int, config providerConfig) error {
 		false)
 
 	if err != nil {
-		return errors.Wrapf(err, "Failed to start server with device id '%s'.", deviceID)
+		return errors.Wrapf(err, "Failed to start server with device id '%d'.", deviceID)
 	}
 
-	log.Printf("[TRACE] Created transaction '%s' to start server with device id '%s'.",
+	log.Printf("[TRACE] Created transaction '%s' to start server with device id '%d'.",
 		transaction.TransactionId, deviceID)
 
 	return nil
@@ -407,10 +407,10 @@ func cancelServer(deviceID int, d *schema.ResourceData, config providerConfig) e
 	err = waitForTransactionAttribute(d, config, "device_cancel_transaction_status", "COMPLETED", []string{"PENDING", "COMMENCED"})
 
 	if err != nil {
-		return errors.Wrapf(err, "Failed to cancel server with device id '%s'.", deviceID)
+		return errors.Wrapf(err, "Failed to cancel server with device id '%d'.", deviceID)
 	}
 
-	log.Printf("[TRACE] Created transaction '%s' to cancel server with device id '%s'.",
+	log.Printf("[TRACE] Created transaction '%s' to cancel server with device id '%d'.",
 		transaction.TransactionId, deviceID)
 
 	return nil
@@ -717,11 +717,15 @@ func resourceRackcorpServerUpdate(d *schema.ResourceData, meta interface{}) erro
 		deviceID := d.Get("device_id").(int)
 		err := config.Client.DeviceUpdateFirewall(deviceID, requestPolicies)
 		if err != nil {
-			log.Println("[INFO] #### ERROR on update request")
+			log.Println("[INFO] ERROR on update request")
 			return err
 		}
 		d.SetPartial("firewall_policies")
-		resourceRackcorpServerPopulateFromDevice(d, config)
+		err = resourceRackcorpServerPopulateFromDevice(d, config)
+		if err != nil {
+			log.Println("[INFO] ERROR on attempt to populate firewall IDs for terraform")
+			return err
+		}
 	}
 	d.Partial(false)
 	return nil
