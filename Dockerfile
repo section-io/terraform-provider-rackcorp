@@ -1,8 +1,11 @@
-FROM golang:1.11 as build
+FROM golang:1.12.6 as build
 
 ENV CGO_ENABLED=0
 
 WORKDIR /go/src/app
+
+COPY charles-ssl-proxy-cert.crt /usr/local/share/ca-certificates/
+RUN update-ca-certificates
 
 # explicitly install dependencies to improve Docker re-build times
 RUN go get -v \
@@ -29,8 +32,8 @@ RUN \
   | sort | uniq \
   | xargs --max-lines=1 -I % bash -c 'cd %; echo $(git rev-parse HEAD) %'
 
-RUN gofmt -e -s -d /go/src/app 2>&1 | tee /gofmt.out && test ! -s /gofmt.out
-RUN go tool vet /go/src/app
+RUN gofmt -e -s -d ./rackcorp 2>&1 | tee /gofmt.out && test ! -s /gofmt.out
+RUN go vet ./rackcorp
 RUN golint -set_exit_status ./...
 RUN errcheck ./...
 

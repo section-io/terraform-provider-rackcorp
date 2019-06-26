@@ -2,8 +2,8 @@ package rackcorp
 
 import (
 	"log"
-	"time"
 	"strconv"
+	"time"
 
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/helper/schema"
@@ -252,6 +252,12 @@ func resourceRackcorpServer() *schema.Resource {
 				Optional: true,
 				ForceNew: true,
 			},
+			"dirty_config": {
+				Type:     schema.TypeBool,
+				Optional: true,
+				Default:  false,
+				ForceNew: false,
+			},
 		},
 	}
 }
@@ -279,7 +285,7 @@ func resourceRackcorpServerPopulateFromDevice(d *schema.ResourceData, config pro
 	panicOnError(d.Set("name", device.Name))
 	panicOnError(d.Set("primary_ip", device.PrimaryIP))
 	panicOnError(d.Set("data_center_id", device.DataCenterId))
-	panicOnError(d.Set("firewall_policies",  convertFirewallToMap(device.FirewallPolicies)))
+	panicOnError(d.Set("firewall_policies", convertFirewallToMap(device.FirewallPolicies)))
 
 	powerSwitch := getExtraByKey("SYS_POWERSWITCH", device.Extra)
 	if powerSwitch == "ONLINE" {
@@ -330,7 +336,7 @@ func resourceRackcorpServerPopulateFromContract(d *schema.ResourceData, config p
 	log.Printf("[DEBUG] Rackcorp contract: %#v", contract)
 
 	panicOnError(d.Set("contract_status", contract.Status))
-	if(contract.DeviceId != "") { // DeviceId can be blank for pending contracts
+	if contract.DeviceId != "" { // DeviceId can be blank for pending contracts
 		intID, err := strconv.Atoi(contract.DeviceId)
 		if err != nil {
 			return errors.Wrap(err, "Could not get Rackcorp contract device ID as integer'.")
@@ -377,7 +383,7 @@ func getExtraByKey(key string, extras []api.DeviceExtra) string {
 }
 
 func startServer(deviceID int, config providerConfig) error {
-	stringID := strconv.Itoa(deviceID);
+	stringID := strconv.Itoa(deviceID)
 	transaction, err := config.Client.TransactionCreate(
 		api.TransactionTypeStartup,
 		api.TransactionObjectTypeDevice,
@@ -395,7 +401,7 @@ func startServer(deviceID int, config providerConfig) error {
 }
 
 func cancelServer(deviceID int, d *schema.ResourceData, config providerConfig) error {
-	stringID := strconv.Itoa(deviceID);
+	stringID := strconv.Itoa(deviceID)
 	transaction, err := config.Client.TransactionCreate(
 		api.TransactionTypeCancel,
 		api.TransactionObjectTypeDevice,
@@ -646,7 +652,7 @@ func resourceRackcorpServerCreate(d *schema.ResourceData, meta interface{}) erro
 		return errors.Wrap(err, "Error waiting for Rackcorp device status to be ONLINE")
 	}
 
-	return nil
+	return resourceRackcorpServerRead(d, meta)
 }
 
 func panicOnError(err error) {
@@ -706,10 +712,12 @@ func convertFirewallPoliciesToSlice(firewallPol interface{}) []interface{} {
 func resourceRackcorpServerUpdate(d *schema.ResourceData, meta interface{}) error {
 	log.Print("[INFO] Updating the server(s), only firewall policies are updateable in this version")
 	config := meta.(providerConfig)
+	deviceID := d.Get("device_id").(int)
 
 	d.Partial(true)
+
 	if d.HasChange("firewall_policies") {
-		old, new := d.GetChange("firewall_policies");
+		old, new := d.GetChange("firewall_policies")
 		newPolicies := parseFirewallPolicies(convertFirewallPoliciesToSlice(new))
 		oldPolicies := parseFirewallPolicies(convertFirewallPoliciesToSlice(old))
 		requestPolicies := []api.FirewallPolicy{}
@@ -727,26 +735,68 @@ func resourceRackcorpServerUpdate(d *schema.ResourceData, meta interface{}) erro
 				requestPolicies = append(requestPolicies, oldPolicy)
 			}
 		}
-		deviceID := d.Get("device_id").(int)
 		err := config.Client.DeviceUpdateFirewall(deviceID, requestPolicies)
 		if err != nil {
 			log.Println("[INFO] ERROR on update request")
 			return err
 		}
-		d.SetPartial("firewall_policies")
-		err = resourceRackcorpServerPopulateFromDevice(d, config)
+		err = d.Set("dirty_config", true)
 		if err != nil {
-			log.Println("[INFO] ERROR on attempt to populate firewall IDs for terraform")
+			log.Println("[INFO] ERROR on update request setting dirty_config to true")
 			return err
 		}
+		d.SetPartial("dirty_config")
+		d.SetPartial("firewall_policies")
 	}
+
+	isConfigDirty, ok := d.GetOk("dirty_config")
+	if ok && isConfigDirty.(bool) {
+		log.Print("[INFO] Server config is dirty, sending refreshConfig transaction")
+		err := performRefreshConfig(deviceID, config)
+		if err != nil {
+			log.Println("WARNING Attempt to refreshConfig after firewall changes failed, your rules will not be in effect until you fix this")
+			return err
+		}
+		err = waitForPendingDeviceTransactions(deviceID, config)
+		if err != nil {
+			log.Println("WARNING Attempt to refreshConfig after firewall changes failed, your rules will not be in effect until you fix this")
+			return err
+		}
+		err = d.Set("dirty_config", false)
+		if err != nil {
+			log.Println("[INFO] ERROR on update request setting dirty_config to false")
+			return err
+		}
+		d.SetPartial("dirty_config")
+	}
+
 	d.Partial(false)
+	return resourceRackcorpServerRead(d, meta)
+}
+
+func performRefreshConfig(deviceID int, config providerConfig) error {
+	stringID := strconv.Itoa(deviceID)
+	transaction, err := config.Client.TransactionCreate(
+		api.TransactionTypeRefreshConfig,
+		api.TransactionObjectTypeDevice,
+		stringID,
+		false)
+
+	if err != nil {
+		return errors.Wrapf(err, "Failed to refreshConfig for server with device id '%d'.", deviceID)
+	}
+
+	log.Printf("[TRACE] Created transaction '%s' to refreshConfig on server with device id '%d'.",
+		transaction.TransactionId, deviceID)
+
 	return nil
 }
 
 func arrayContains(arr []api.FirewallPolicy, item api.FirewallPolicy) bool {
 	for _, thing := range arr {
-		if isFirewallSame(thing, item) {return true}
+		if isFirewallSame(thing, item) {
+			return true
+		}
 	}
 	return false
 }
