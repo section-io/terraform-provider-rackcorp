@@ -4,9 +4,6 @@ ENV CGO_ENABLED=0
 
 WORKDIR /go/src/app
 
-COPY charles-ssl-proxy-cert.crt /usr/local/share/ca-certificates/
-RUN update-ca-certificates
-
 # explicitly install dependencies to improve Docker re-build times
 RUN go get -v \
   github.com/kisielk/errcheck \
