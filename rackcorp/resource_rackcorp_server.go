@@ -252,12 +252,6 @@ func resourceRackcorpServer() *schema.Resource {
 				Optional: true,
 				ForceNew: true,
 			},
-			"dirty_config": {
-				Type:     schema.TypeBool,
-				Optional: true,
-				Default:  false,
-				ForceNew: false,
-			},
 		},
 	}
 }
@@ -716,6 +710,8 @@ func resourceRackcorpServerUpdate(d *schema.ResourceData, meta interface{}) erro
 
 	d.Partial(true)
 
+	isConfigDirty := false
+
 	if d.HasChange("firewall_policies") {
 		old, new := d.GetChange("firewall_policies")
 		newPolicies := parseFirewallPolicies(convertFirewallPoliciesToSlice(new))
@@ -740,17 +736,11 @@ func resourceRackcorpServerUpdate(d *schema.ResourceData, meta interface{}) erro
 			log.Println("[INFO] ERROR on update request")
 			return err
 		}
-		err = d.Set("dirty_config", true)
-		if err != nil {
-			log.Println("[INFO] ERROR on update request setting dirty_config to true")
-			return err
-		}
-		d.SetPartial("dirty_config")
+		isConfigDirty = true
 		d.SetPartial("firewall_policies")
 	}
 
-	isConfigDirty, ok := d.GetOk("dirty_config")
-	if ok && isConfigDirty.(bool) {
+	if isConfigDirty {
 		log.Print("[INFO] Server config is dirty, sending refreshConfig transaction")
 		err := performRefreshConfig(deviceID, config)
 		if err != nil {
@@ -762,12 +752,6 @@ func resourceRackcorpServerUpdate(d *schema.ResourceData, meta interface{}) erro
 			log.Println("WARNING Attempt to refreshConfig after firewall changes failed, your rules will not be in effect until you fix this")
 			return err
 		}
-		err = d.Set("dirty_config", false)
-		if err != nil {
-			log.Println("[INFO] ERROR on update request setting dirty_config to false")
-			return err
-		}
-		d.SetPartial("dirty_config")
 	}
 
 	d.Partial(false)
