@@ -29,6 +29,8 @@ RUN go install ./...
 
 RUN go test -v ./...
 
+RUN mv /go/bin/terraform-provider-rackcorp /go/bin/terraform-provider-rackcorp_v0.2.0
+
 ### END FROM build
 
 FROM hashicorp/terraform:0.12.6
@@ -37,7 +39,7 @@ RUN mkdir -p /work/.terraform/plugins /root/.terraform.d/plugins
 
 WORKDIR /work
 
-COPY --from=build /go/bin/terraform-provider-rackcorp /root/.terraform.d/plugins
+COPY --from=build /go/bin/terraform-provider-rackcorp* /root/.terraform.d/plugins/
 
 COPY example.tf ./main.tf
 

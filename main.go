@@ -1,4 +1,4 @@
-package main // import "github.com/section-io/terraform-provider-rackcorp"
+package main
 
 import (
 	"github.com/hashicorp/terraform/plugin"
