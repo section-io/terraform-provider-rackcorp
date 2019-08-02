@@ -10,11 +10,6 @@ RUN go get -v \
   golang.org/x/lint/golint \
   gopkg.in/h2non/gock.v1
 
-# Use specific version of terraform
-RUN mkdir -p "${GOPATH}/src/github.com/hashicorp/" && \
-  cd "${GOPATH}/src/github.com/hashicorp/" && \
-  git clone --verbose --branch v0.12.5 --depth 1 https://github.com/hashicorp/terraform
-
 WORKDIR /app
 
 # BEGIN pre-install dependencies to reduce time for each code change to build
@@ -36,14 +31,13 @@ RUN go test -v ./...
 
 ### END FROM build
 
-FROM hashicorp/terraform:0.12.5
+FROM hashicorp/terraform:0.12.6
 
-RUN mkdir -p /work/ && \
-  printf 'providers {\n  rackcorp = "/go/bin/terraform-provider-rackcorp"\n}\n' >/root/.terraformrc
+RUN mkdir -p /work/.terraform/plugins /root/.terraform.d/plugins
 
 WORKDIR /work
 
-COPY --from=build /go/bin/terraform-provider-rackcorp /go/bin/
+COPY --from=build /go/bin/terraform-provider-rackcorp /root/.terraform.d/plugins
 
 COPY example.tf ./main.tf
 
