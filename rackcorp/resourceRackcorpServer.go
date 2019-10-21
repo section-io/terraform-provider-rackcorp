@@ -252,6 +252,12 @@ func resourceRackcorpServer() *schema.Resource {
 				Optional: true,
 				ForceNew: true,
 			},
+			"location": {
+				Type:     schema.TypeString,
+				Optional: true,
+				Computed: true,
+				ForceNew: true,
+			},
 			"dirty_config": {
 				Type:     schema.TypeBool,
 				Optional: true,
@@ -286,6 +292,7 @@ func resourceRackcorpServerPopulateFromDevice(d *schema.ResourceData, config pro
 	panicOnError(d.Set("primary_ip", device.PrimaryIP))
 	panicOnError(d.Set("data_center_id", device.DataCenterId))
 	panicOnError(d.Set("firewall_policies", convertFirewallToMap(device.FirewallPolicies)))
+	panicOnError(d.Set("location", getExtraByKey("LOCATION", device.Extra)))
 
 	powerSwitch := getExtraByKey("SYS_POWERSWITCH", device.Extra)
 	if powerSwitch == "ONLINE" {
@@ -602,6 +609,10 @@ func resourceRackcorpServerCreate(d *schema.ResourceData, meta interface{}) erro
 		// Required due to omitempty int handling in json serialiser
 		productDetails.HostGroupID = new(int)
 		*productDetails.HostGroupID = hostGroupID.(int)
+	}
+
+	if location, ok := d.GetOk("location"); ok {
+		productDetails.Location = location.(string)
 	}
 
 	productCode := api.GetVirtualServerProductCode(
