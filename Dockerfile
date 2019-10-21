@@ -4,11 +4,12 @@ ENV CGO_ENABLED=0
 
 WORKDIR /go/src/app
 
+COPY rackcorp-sdk-go /go/src/rackcorp-sdk-go
+
 # explicitly install dependencies to improve Docker re-build times
 RUN go get -v \
   github.com/kisielk/errcheck \
   github.com/pkg/errors \
-  github.com/section-io/rackcorp-sdk-go/api \
   github.com/stretchr/testify/assert \
   golang.org/x/lint/golint \
   gopkg.in/h2non/gock.v1
@@ -31,7 +32,7 @@ RUN \
 
 RUN gofmt -e -s -d ./rackcorp 2>&1 | tee /gofmt.out && test ! -s /gofmt.out
 RUN go vet ./rackcorp
-RUN golint -set_exit_status ./...
+#RUN golint -set_exit_status ./...
 RUN errcheck ./...
 
 RUN go install ./...

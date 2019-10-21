@@ -5,11 +5,12 @@ import (
 	"strconv"
 	"time"
 
+	"rackcorp-sdk-go/api"
+
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/terraform/helper/validation"
 	"github.com/pkg/errors"
-	"github.com/section-io/rackcorp-sdk-go/api"
 )
 
 func storageSchemaElement() *schema.Resource {

@@ -1,9 +1,10 @@
 package rackcorp
 
 import (
+	"rackcorp-sdk-go/api"
+
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/terraform/terraform"
-	"github.com/section-io/rackcorp-sdk-go/api"
 )
 
 // Provider returns a terraform.ResourceProvider.
