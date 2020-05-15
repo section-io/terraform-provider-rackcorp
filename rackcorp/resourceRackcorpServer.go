@@ -153,7 +153,7 @@ func resourceRackcorpServer() *schema.Resource {
 			},
 			"operating_system": {
 				Type:     schema.TypeString,
-				Required: true,
+				Optional: true,
 				ForceNew: true,
 			},
 			"cpu_count": {
@@ -568,10 +568,11 @@ func resourceRackcorpServerCreate(d *schema.ResourceData, meta interface{}) erro
 		},
 	}
 
-	install := api.Install{
-		OperatingSystem: d.Get("operating_system").(string),
-	}
+	install := api.Install{}
+	if os, ok := d.GetOk("operating_system"); ok {
+		install.OperatingSystem = os.(string)
 
+	}
 	if script, ok := d.GetOk("post_install_script"); ok {
 		install.PostInstallScript = script.(string)
 	}
