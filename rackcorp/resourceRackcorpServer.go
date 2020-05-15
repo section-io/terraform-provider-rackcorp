@@ -411,6 +411,9 @@ func cancelServer(deviceID int, d *schema.ResourceData, config providerConfig) e
 		api.TransactionObjectTypeDevice,
 		stringID,
 		true)
+	if err != nil {
+		return errors.Wrapf(err, "Failed to request server cancellation for device id '%d'.", deviceID)
+	}
 
 	panicOnError(d.Set("device_cancel_transaction_id", transaction.TransactionId))
 
@@ -768,12 +771,12 @@ func resourceRackcorpServerUpdate(d *schema.ResourceData, meta interface{}) erro
 		log.Print("[INFO] Server config is dirty, sending refreshConfig transaction")
 		err := performRefreshConfig(deviceID, config)
 		if err != nil {
-			log.Println("WARNING Attempt to refreshConfig after firewall changes failed, your rules will not be in effect until you fix this")
+			log.Println("[WARN] Request to refresh configuration after firewall changes failed, changes have not been applied.")
 			return err
 		}
 		err = waitForPendingDeviceTransactions(deviceID, config)
 		if err != nil {
-			log.Println("WARNING Attempt to refreshConfig after firewall changes failed, your rules will not be in effect until you fix this")
+			log.Println("[WARN] Attempt to refresh configuration after firewall changes failed, changes have not been applied.")
 			return err
 		}
 	}
