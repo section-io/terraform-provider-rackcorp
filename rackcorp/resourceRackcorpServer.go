@@ -257,6 +257,12 @@ func resourceRackcorpServer() *schema.Resource {
 				Required: true,
 				ForceNew: true,
 			},
+			"deploy_media_image_id": {
+				ConflictsWith: []string{"operating_system", "post_install_script"},
+				Type:          schema.TypeString,
+				Optional:      true,
+				ForceNew:      true,
+			},
 		},
 	}
 }
@@ -380,14 +386,14 @@ func getExtraByKey(key string, extras map[string]interface{}) string {
 	return ""
 }
 
-func startServer(deviceID int, config providerConfig) error {
+func startServer(deviceID int, d *schema.ResourceData, config providerConfig) error {
 	stringID := strconv.Itoa(deviceID)
-	transaction, err := config.Client.TransactionCreate(
-		api.TransactionTypeStartup,
-		api.TransactionObjectTypeDevice,
-		stringID,
-		false)
+	data := api.TransactionStartupData{}
+	if imageId, ok := d.GetOk("deploy_media_image_id"); ok {
+		data.DeployMediaImageId = imageId.(string)
+	}
 
+	transaction, err := config.Client.TransactionDeviceStartup(stringID, data)
 	if err != nil {
 		return errors.Wrapf(err, "Failed to start server with device id '%d'.", deviceID)
 	}
@@ -566,10 +572,14 @@ func resourceRackcorpServerCreate(d *schema.ResourceData, meta interface{}) erro
 		},
 	}
 
+	extraRefreshRequired := true
 	install := api.Install{}
 	if os, ok := d.GetOk("operating_system"); ok {
 		install.OperatingSystem = os.(string)
 
+		// Rackcorp willl remove the need for this in future API
+		// revisions. From email 2018-04-30.
+		extraRefreshRequired = false
 	}
 	if script, ok := d.GetOk("post_install_script"); ok {
 		install.PostInstallScript = script.(string)
@@ -637,12 +647,21 @@ func resourceRackcorpServerCreate(d *schema.ResourceData, meta interface{}) erro
 	}
 
 	deviceID := d.Get("device_id").(int)
+
+	if extraRefreshRequired {
+		err := performRefreshConfig(deviceID, config)
+		if err != nil {
+			log.Println("[WARN] Request to refresh configuration before starting server failed.")
+			return err
+		}
+	}
+
 	err = waitForPendingDeviceTransactions(deviceID, config)
 	if err != nil {
 		return errors.Wrap(err, "Error waiting for Rackcorp device transactions to complete")
 	}
 
-	err = startServer(deviceID, config)
+	err = startServer(deviceID, d, config)
 	if err != nil {
 		return err
 	}
