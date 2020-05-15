@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/terraform/helper/validation"
 	"github.com/pkg/errors"
-	"github.com/section-io/rackcorp-sdk-go/api"
+	"github.com/section-io/rackcorp-sdk-go/v2"
 )
 
 func storageSchemaElement() *schema.Resource {
@@ -368,17 +368,16 @@ func resourceRackcorpServerPopulateFromTransaction(d *schema.ResourceData, confi
 	return nil
 }
 
-func getExtraByKey(key string, extras []api.DeviceExtra) string {
-	for _, extra := range extras {
-		if extra.Key == key {
-			if extra.Value == nil {
-				return ""
-			}
-			if s, ok := extra.Value.(string); ok {
-				return s
-			}
-			return ""
-		}
+func getExtraByKey(key string, extras map[string]interface{}) string {
+	extra, ok := extras[key]
+	if !ok {
+		return ""
+	}
+	if extra == nil {
+		return ""
+	}
+	if s, ok := extra.(string); ok {
+		return s
 	}
 	return ""
 }
