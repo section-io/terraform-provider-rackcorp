@@ -11,6 +11,11 @@ insert_final_newline = true
 indent_style = tab
 indent_size = 8
 
+# https://google.github.io/styleguide/shell.xml#Indentation
+[*.sh]
+indent_style = space
+indent_size = 2
+
 [*.tf]
 # https://github.com/hashicorp/hcl/issues/111
 indent_style = space
