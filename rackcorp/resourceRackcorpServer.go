@@ -269,8 +269,31 @@ func resourceRackcorpServer() *schema.Resource {
 				Optional:      true,
 				ForceNew:      true,
 			},
+			"deploy_media_image_access_key": {
+				ConflictsWith: []string{"operating_system", "post_install_script"},
+				Type:          schema.TypeString,
+				Optional:      true,
+			},
+			"deploy_media_image_access_secret": {
+				ConflictsWith: []string{"operating_system", "post_install_script"},
+				Type:          schema.TypeString,
+				Optional:      true,
+				Sensitive:     true,
+			},
+			"deploy_media_image_bucket": {
+				ConflictsWith: []string{"deploy_media_image_id", "operating_system", "post_install_script", "root_password"},
+				Type:          schema.TypeString,
+				Optional:      true,
+				ForceNew:      true,
+			},
 			"deploy_media_image_id": {
 				ConflictsWith: []string{"operating_system", "post_install_script", "root_password"},
+				Type:          schema.TypeString,
+				Optional:      true,
+				ForceNew:      true,
+			},
+			"deploy_media_image_path": {
+				ConflictsWith: []string{"operating_system", "post_install_script"},
 				Type:          schema.TypeString,
 				Optional:      true,
 				ForceNew:      true,
@@ -403,6 +426,19 @@ func startServer(deviceID int, d *schema.ResourceData, config providerConfig) er
 	data := api.TransactionStartupData{}
 	if imageId, ok := d.GetOk("deploy_media_image_id"); ok {
 		data.DeployMediaImageId = imageId.(string)
+	}
+
+	if bucket, ok := d.GetOk("deploy_media_image_bucket"); ok {
+		data.DeployMediaImageBucket = bucket.(string)
+	}
+	if imagePath, ok := d.GetOk("deploy_media_image_path"); ok {
+		data.DeployMediaImagePath = imagePath.(string)
+	}
+	if accessKey, ok := d.GetOk("deploy_media_image_access_key"); ok {
+		data.DeployMediaImageAccessKey = accessKey.(string)
+	}
+	if accessSecret, ok := d.GetOk("deploy_media_image_access_secret"); ok {
+		data.DeployMediaImageAccessSecret = accessSecret.(string)
 	}
 
 	if userData, ok := d.GetOk("user_data"); ok {
