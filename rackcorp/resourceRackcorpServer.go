@@ -168,7 +168,7 @@ func resourceRackcorpServer() *schema.Resource {
 			},
 			"root_password": {
 				Type:      schema.TypeString,
-				Required:  true,
+				Optional:  true,
 				ForceNew:  true,
 				Sensitive: true,
 			},
@@ -568,13 +568,6 @@ func translateNic(d *schema.ResourceData) []api.Nic {
 func resourceRackcorpServerCreate(d *schema.ResourceData, meta interface{}) error {
 	config := meta.(providerConfig)
 
-	credentials := []api.Credential{
-		{
-			Username: "root",
-			Password: d.Get("root_password").(string),
-		},
-	}
-
 	extraRefreshRequired := true
 	install := api.Install{}
 	if os, ok := d.GetOk("operating_system"); ok {
@@ -589,7 +582,6 @@ func resourceRackcorpServerCreate(d *schema.ResourceData, meta interface{}) erro
 	}
 
 	productDetails := api.ProductDetails{
-		Credentials:      credentials,
 		Install:          install,
 		CpuCount:         d.Get("cpu_count").(int),
 		Location:         d.Get("location").(string),
@@ -597,6 +589,15 @@ func resourceRackcorpServerCreate(d *schema.ResourceData, meta interface{}) erro
 		Storage:          translateStorage(d),
 		FirewallPolicies: translateFirewallPolicy(d),
 		Nics:             translateNic(d),
+	}
+
+	if password, ok := d.GetOk("root_password"); ok {
+		productDetails.Credentials = []api.Credential{
+			{
+				Username: "root",
+				Password: password.(string),
+			},
+		}
 	}
 
 	if name, ok := d.GetOk("name"); ok {
