@@ -1,0 +1,6 @@
+/.bin/
+.terraform/
+.tfplan
+terraform.tfstate
+*.backup
+*.log
