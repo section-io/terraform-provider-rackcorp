@@ -257,6 +257,18 @@ func resourceRackcorpServer() *schema.Resource {
 				Required: true,
 				ForceNew: true,
 			},
+			"user_data": {
+				ConflictsWith: []string{"operating_system", "post_install_script"},
+				Type:          schema.TypeString,
+				Optional:      true,
+				ForceNew:      true,
+			},
+			"meta_data": {
+				ConflictsWith: []string{"operating_system", "post_install_script"},
+				Type:          schema.TypeString,
+				Optional:      true,
+				ForceNew:      true,
+			},
 			"deploy_media_image_id": {
 				ConflictsWith: []string{"operating_system", "post_install_script", "root_password"},
 				Type:          schema.TypeString,
@@ -391,6 +403,14 @@ func startServer(deviceID int, d *schema.ResourceData, config providerConfig) er
 	data := api.TransactionStartupData{}
 	if imageId, ok := d.GetOk("deploy_media_image_id"); ok {
 		data.DeployMediaImageId = imageId.(string)
+	}
+
+	if userData, ok := d.GetOk("user_data"); ok {
+		data.CloudInit.UserData = userData.(string)
+	}
+
+	if metaData, ok := d.GetOk("meta_data"); ok {
+		data.CloudInit.MetaData = metaData.(string)
 	}
 
 	transaction, err := config.Client.TransactionDeviceStartup(stringID, data)
