@@ -258,7 +258,7 @@ func resourceRackcorpServer() *schema.Resource {
 				ForceNew: true,
 			},
 			"deploy_media_image_id": {
-				ConflictsWith: []string{"operating_system", "post_install_script"},
+				ConflictsWith: []string{"operating_system", "post_install_script", "root_password"},
 				Type:          schema.TypeString,
 				Optional:      true,
 				ForceNew:      true,
