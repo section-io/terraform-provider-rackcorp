@@ -681,13 +681,13 @@ func resourceRackcorpServerCreate(d *schema.ResourceData, meta interface{}) erro
 
 	createdOrder, err := config.Client.OrderCreate(productCode, config.CustomerID, productDetails)
 	if err != nil {
-		return errors.Wrap(err, "Rackcorp order create request failed.")
+		return errors.Wrap(err, "Rackcorp order create request failed")
 	}
 
 	orderID := createdOrder.OrderId
 	confirmedOrder, err := config.Client.OrderConfirm(orderID)
 	if err != nil {
-		return errors.Wrapf(err, "Failed to confirm Rackcorp server order '%s'.", orderID)
+		return errors.Wrapf(err, "Failed to confirm Rackcorp server order '%s'", orderID)
 	}
 
 	d.SetId(orderID)
