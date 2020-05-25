@@ -11,6 +11,7 @@ resource "rackcorp_server" "example" {
   cpu_count        = 1
   memory_gb        = 4
   root_password    = "a-secret-password"
+  location         = "GLOBALSWITCH-SYD1"
 
   /*
   nics = [
