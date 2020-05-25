@@ -424,8 +424,8 @@ func getExtraByKey(key string, extras map[string]interface{}) string {
 func startServer(deviceID int, d *schema.ResourceData, config providerConfig) error {
 	stringID := strconv.Itoa(deviceID)
 	data := api.TransactionStartupData{}
-	if imageId, ok := d.GetOk("deploy_media_image_id"); ok {
-		data.DeployMediaImageId = imageId.(string)
+	if imageID, ok := d.GetOk("deploy_media_image_id"); ok {
+		data.DeployMediaImageId = imageID.(string)
 	}
 
 	if bucket, ok := d.GetOk("deploy_media_image_bucket"); ok {
