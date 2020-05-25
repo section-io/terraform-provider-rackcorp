@@ -1,55 +1,40 @@
-FROM golang:1.12.6 as build
+FROM golang:1.13.7 as build
 
 ENV CGO_ENABLED=0
 
-WORKDIR /go/src/app
+WORKDIR /src/terraform-provider-rackcorp
 
-# explicitly install dependencies to improve Docker re-build times
-RUN go get -v \
-  github.com/kisielk/errcheck \
-  github.com/pkg/errors \
-  github.com/section-io/rackcorp-sdk-go/api \
-  github.com/stretchr/testify/assert \
-  golang.org/x/lint/golint \
-  gopkg.in/h2non/gock.v1
+COPY go.mod go.sum tools.go ./
+RUN go mod download
 
-# Use specific version of terraform
-RUN mkdir -p "${GOPATH}/src/github.com/hashicorp/" && \
-    cd "${GOPATH}/src/github.com/hashicorp/" && \
-      git clone --verbose --branch v0.11.10 --depth 1 https://github.com/hashicorp/terraform
+# explicitly install tools to improve Docker re-build times
+RUN grep '^[[:space:]]*_[[:space:]]\+"[^"]\+"' tools.go | cut -d'"' -f2 | xargs -t go install
 
-WORKDIR /go/src/github.com/section-io/terraform-provider-rackcorp
 COPY . .
 
-# Capture dependency versions
-RUN \
-  go list -f '{{ join .Imports "\n" }}' ./... \
-  | xargs --max-lines=1 -I % go list -f '{{ .Dir }}' % \
-  | xargs --max-lines=1 -I % bash -c 'cd %; git rev-parse --show-toplevel 2>/dev/null || true ' \
-  | sort | uniq \
-  | xargs --max-lines=1 -I % bash -c 'cd %; echo $(git rev-parse HEAD) %'
-
-RUN gofmt -e -s -d ./rackcorp 2>&1 | tee /gofmt.out && test ! -s /gofmt.out
-RUN go vet ./rackcorp
+RUN gofmt -e -s -d . 2>&1 | tee /gofmt.out && test ! -s /gofmt.out
+RUN go vet ./...
 RUN golint -set_exit_status ./...
+
 RUN errcheck ./...
 
 RUN go install ./...
 
-RUN cd "/go/src/$(go list -e -f '{{.ImportComment}}')" && \
-  go test -bench=. -v ./...
+RUN go test -v ./...
 
 ### END FROM build
 
-FROM hashicorp/terraform:0.11.10
+FROM hashicorp/terraform:0.11.10 as base
 
-RUN mkdir -p /work/ && \
-  printf 'providers {\n  rackcorp = "/go/bin/terraform-provider-rackcorp"\n}\n' >/root/.terraformrc
+RUN printf 'providers {\n  rackcorp = "/go/bin/terraform-provider-rackcorp"\n}\n' >/root/.terraformrc
 
-WORKDIR /work
-
+# TODO add version to file name as per:
+#  https://www.terraform.io/docs/configuration/providers.html#plugin-names-and-versions
 COPY --from=build /go/bin/terraform-provider-rackcorp /go/bin/
 
+FROM base as test
+
+WORKDIR /work
 COPY example.tf ./main.tf
 
 RUN terraform fmt -diff -check ./
@@ -59,3 +44,5 @@ ARG TF_LOG=WARN
 
 RUN terraform init && \
   terraform plan -out=a.tfplan
+
+FROM base
