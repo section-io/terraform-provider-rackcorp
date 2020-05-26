@@ -1,2 +1,4 @@
 image_access_key    = "C0BOESWJANDO8GOYFEMZ"
 image_access_secret = "aaaaaaabbbbbbbbb111111111222222222222000"
+image_bucket        = "rackcorp-bucket-name"
+image_path          = "image-b0093e2.qcow2"
