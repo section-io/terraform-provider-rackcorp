@@ -14,6 +14,7 @@ resource "rackcorp_server" "exercise" {
   memory_gb    = 4
   user_data    = "${file("${path.module}/user_data.yaml")}"
 
+  operating_system                 = "SELFINSTALLEDFROMISO"
   deploy_media_image_access_key    = "${var.image_access_key}"
   deploy_media_image_access_secret = "${var.image_access_secret}"
   deploy_media_image_bucket        = "${var.image_bucket}"
