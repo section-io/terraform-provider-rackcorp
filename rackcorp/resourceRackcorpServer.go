@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/terraform/helper/validation"
 	"github.com/pkg/errors"
-	"github.com/section-io/rackcorp-sdk-go/api"
+	"github.com/section-io/rackcorp-sdk-go/v2"
 )
 
 func storageSchemaElement() *schema.Resource {
@@ -153,7 +153,7 @@ func resourceRackcorpServer() *schema.Resource {
 			},
 			"operating_system": {
 				Type:     schema.TypeString,
-				Required: true,
+				Optional: true,
 				ForceNew: true,
 			},
 			"cpu_count": {
@@ -168,7 +168,7 @@ func resourceRackcorpServer() *schema.Resource {
 			},
 			"root_password": {
 				Type:      schema.TypeString,
-				Required:  true,
+				Optional:  true,
 				ForceNew:  true,
 				Sensitive: true,
 			},
@@ -254,15 +254,49 @@ func resourceRackcorpServer() *schema.Resource {
 			},
 			"location": {
 				Type:     schema.TypeString,
-				Optional: true,
-				Computed: true,
+				Required: true,
 				ForceNew: true,
 			},
-			"dirty_config": {
-				Type:     schema.TypeBool,
-				Optional: true,
-				Default:  false,
-				ForceNew: false,
+			"user_data": {
+				ConflictsWith: []string{"post_install_script"},
+				Type:          schema.TypeString,
+				Optional:      true,
+				ForceNew:      true,
+			},
+			"meta_data": {
+				ConflictsWith: []string{"post_install_script"},
+				Type:          schema.TypeString,
+				Optional:      true,
+				ForceNew:      true,
+			},
+			"deploy_media_image_access_key": {
+				ConflictsWith: []string{"post_install_script"},
+				Type:          schema.TypeString,
+				Optional:      true,
+			},
+			"deploy_media_image_access_secret": {
+				ConflictsWith: []string{"post_install_script"},
+				Type:          schema.TypeString,
+				Optional:      true,
+				Sensitive:     true,
+			},
+			"deploy_media_image_bucket": {
+				ConflictsWith: []string{"deploy_media_image_id", "post_install_script", "root_password"},
+				Type:          schema.TypeString,
+				Optional:      true,
+				ForceNew:      true,
+			},
+			"deploy_media_image_id": {
+				ConflictsWith: []string{"post_install_script", "root_password"},
+				Type:          schema.TypeString,
+				Optional:      true,
+				ForceNew:      true,
+			},
+			"deploy_media_image_path": {
+				ConflictsWith: []string{"post_install_script"},
+				Type:          schema.TypeString,
+				Optional:      true,
+				ForceNew:      true,
 			},
 		},
 	}
@@ -292,7 +326,6 @@ func resourceRackcorpServerPopulateFromDevice(d *schema.ResourceData, config pro
 	panicOnError(d.Set("primary_ip", device.PrimaryIP))
 	panicOnError(d.Set("data_center_id", device.DataCenterId))
 	panicOnError(d.Set("firewall_policies", convertFirewallToMap(device.FirewallPolicies)))
-	panicOnError(d.Set("location", getExtraByKey("LOCATION", device.Extra)))
 
 	powerSwitch := getExtraByKey("SYS_POWERSWITCH", device.Extra)
 	if powerSwitch == "ONLINE" {
@@ -374,29 +407,49 @@ func resourceRackcorpServerPopulateFromTransaction(d *schema.ResourceData, confi
 	return nil
 }
 
-func getExtraByKey(key string, extras []api.DeviceExtra) string {
-	for _, extra := range extras {
-		if extra.Key == key {
-			if extra.Value == nil {
-				return ""
-			}
-			if s, ok := extra.Value.(string); ok {
-				return s
-			}
-			return ""
-		}
+func getExtraByKey(key string, extras map[string]interface{}) string {
+	extra, ok := extras[key]
+	if !ok {
+		return ""
+	}
+	if extra == nil {
+		return ""
+	}
+	if s, ok := extra.(string); ok {
+		return s
 	}
 	return ""
 }
 
-func startServer(deviceID int, config providerConfig) error {
+func startServer(deviceID int, d *schema.ResourceData, config providerConfig) error {
 	stringID := strconv.Itoa(deviceID)
-	transaction, err := config.Client.TransactionCreate(
-		api.TransactionTypeStartup,
-		api.TransactionObjectTypeDevice,
-		stringID,
-		false)
+	data := api.TransactionStartupData{}
+	if imageID, ok := d.GetOk("deploy_media_image_id"); ok {
+		data.DeployMediaImageId = imageID.(string)
+	}
 
+	if bucket, ok := d.GetOk("deploy_media_image_bucket"); ok {
+		data.DeployMediaImageBucket = bucket.(string)
+	}
+	if imagePath, ok := d.GetOk("deploy_media_image_path"); ok {
+		data.DeployMediaImagePath = imagePath.(string)
+	}
+	if accessKey, ok := d.GetOk("deploy_media_image_access_key"); ok {
+		data.DeployMediaImageAccessKey = accessKey.(string)
+	}
+	if accessSecret, ok := d.GetOk("deploy_media_image_access_secret"); ok {
+		data.DeployMediaImageAccessSecret = accessSecret.(string)
+	}
+
+	if userData, ok := d.GetOk("user_data"); ok {
+		data.CloudInit.UserData = userData.(string)
+	}
+
+	if metaData, ok := d.GetOk("meta_data"); ok {
+		data.CloudInit.MetaData = metaData.(string)
+	}
+
+	transaction, err := config.Client.TransactionDeviceStartup(stringID, data)
 	if err != nil {
 		return errors.Wrapf(err, "Failed to start server with device id '%d'.", deviceID)
 	}
@@ -414,6 +467,9 @@ func cancelServer(deviceID int, d *schema.ResourceData, config providerConfig) e
 		api.TransactionObjectTypeDevice,
 		stringID,
 		true)
+	if err != nil {
+		return errors.Wrapf(err, "Failed to request server cancellation for device id '%d'.", deviceID)
+	}
 
 	panicOnError(d.Set("device_cancel_transaction_id", transaction.TransactionId))
 
@@ -568,29 +624,36 @@ func translateNic(d *schema.ResourceData) []api.Nic {
 func resourceRackcorpServerCreate(d *schema.ResourceData, meta interface{}) error {
 	config := meta.(providerConfig)
 
-	credentials := []api.Credential{
-		{
-			Username: "root",
-			Password: d.Get("root_password").(string),
-		},
-	}
+	extraRefreshRequired := true
+	install := api.Install{}
+	if os, ok := d.GetOk("operating_system"); ok {
+		install.OperatingSystem = os.(string)
 
-	install := api.Install{
-		OperatingSystem: d.Get("operating_system").(string),
+		// Rackcorp willl remove the need for this in future API
+		// revisions. From email 2018-04-30.
+		extraRefreshRequired = false
 	}
-
 	if script, ok := d.GetOk("post_install_script"); ok {
 		install.PostInstallScript = script.(string)
 	}
 
 	productDetails := api.ProductDetails{
-		Credentials:      credentials,
 		Install:          install,
 		CpuCount:         d.Get("cpu_count").(int),
+		Location:         d.Get("location").(string),
 		MemoryGB:         d.Get("memory_gb").(int),
 		Storage:          translateStorage(d),
 		FirewallPolicies: translateFirewallPolicy(d),
 		Nics:             translateNic(d),
+	}
+
+	if password, ok := d.GetOk("root_password"); ok {
+		productDetails.Credentials = []api.Credential{
+			{
+				Username: "root",
+				Password: password.(string),
+			},
+		}
 	}
 
 	if name, ok := d.GetOk("name"); ok {
@@ -611,10 +674,6 @@ func resourceRackcorpServerCreate(d *schema.ResourceData, meta interface{}) erro
 		*productDetails.HostGroupID = hostGroupID.(int)
 	}
 
-	if location, ok := d.GetOk("location"); ok {
-		productDetails.Location = location.(string)
-	}
-
 	productCode := api.GetVirtualServerProductCode(
 		d.Get("server_class").(string),
 		d.Get("country").(string),
@@ -622,13 +681,13 @@ func resourceRackcorpServerCreate(d *schema.ResourceData, meta interface{}) erro
 
 	createdOrder, err := config.Client.OrderCreate(productCode, config.CustomerID, productDetails)
 	if err != nil {
-		return errors.Wrap(err, "Rackcorp order create request failed.")
+		return errors.Wrap(err, "Rackcorp order create request failed")
 	}
 
 	orderID := createdOrder.OrderId
 	confirmedOrder, err := config.Client.OrderConfirm(orderID)
 	if err != nil {
-		return errors.Wrapf(err, "Failed to confirm Rackcorp server order '%s'.", orderID)
+		return errors.Wrapf(err, "Failed to confirm Rackcorp server order '%s'", orderID)
 	}
 
 	d.SetId(orderID)
@@ -648,12 +707,21 @@ func resourceRackcorpServerCreate(d *schema.ResourceData, meta interface{}) erro
 	}
 
 	deviceID := d.Get("device_id").(int)
+
+	if extraRefreshRequired {
+		err := performRefreshConfig(deviceID, config)
+		if err != nil {
+			log.Println("[WARN] Request to refresh configuration before starting server failed.")
+			return err
+		}
+	}
+
 	err = waitForPendingDeviceTransactions(deviceID, config)
 	if err != nil {
 		return errors.Wrap(err, "Error waiting for Rackcorp device transactions to complete")
 	}
 
-	err = startServer(deviceID, config)
+	err = startServer(deviceID, d, config)
 	if err != nil {
 		return err
 	}
@@ -724,6 +792,7 @@ func resourceRackcorpServerUpdate(d *schema.ResourceData, meta interface{}) erro
 	log.Print("[INFO] Updating the server(s), only firewall policies are updateable in this version")
 	config := meta.(providerConfig)
 	deviceID := d.Get("device_id").(int)
+	isConfigDirty := false
 
 	d.Partial(true)
 
@@ -751,34 +820,22 @@ func resourceRackcorpServerUpdate(d *schema.ResourceData, meta interface{}) erro
 			log.Println("[INFO] ERROR on update request")
 			return err
 		}
-		err = d.Set("dirty_config", true)
-		if err != nil {
-			log.Println("[INFO] ERROR on update request setting dirty_config to true")
-			return err
-		}
-		d.SetPartial("dirty_config")
+		isConfigDirty = true
 		d.SetPartial("firewall_policies")
 	}
 
-	isConfigDirty, ok := d.GetOk("dirty_config")
-	if ok && isConfigDirty.(bool) {
+	if isConfigDirty {
 		log.Print("[INFO] Server config is dirty, sending refreshConfig transaction")
 		err := performRefreshConfig(deviceID, config)
 		if err != nil {
-			log.Println("WARNING Attempt to refreshConfig after firewall changes failed, your rules will not be in effect until you fix this")
+			log.Println("[WARN] Request to refresh configuration after firewall changes failed, changes have not been applied.")
 			return err
 		}
 		err = waitForPendingDeviceTransactions(deviceID, config)
 		if err != nil {
-			log.Println("WARNING Attempt to refreshConfig after firewall changes failed, your rules will not be in effect until you fix this")
+			log.Println("[WARN] Attempt to refresh configuration after firewall changes failed, changes have not been applied.")
 			return err
 		}
-		err = d.Set("dirty_config", false)
-		if err != nil {
-			log.Println("[INFO] ERROR on update request setting dirty_config to false")
-			return err
-		}
-		d.SetPartial("dirty_config")
 	}
 
 	d.Partial(false)
