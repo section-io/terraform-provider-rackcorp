@@ -12,6 +12,7 @@ resource "rackcorp_server" "example" {
   memory_gb        = 4
   root_password    = "a-secret-password"
   location         = "GLOBALSWITCH-SYD1"
+  timezone         = "UTC"
 
   /*
   nics = [

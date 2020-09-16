@@ -298,6 +298,11 @@ func resourceRackcorpServer() *schema.Resource {
 				Optional:      true,
 				ForceNew:      true,
 			},
+			"timezone": {
+				Type:     schema.TypeString,
+				Optional: true,
+				ForceNew: true,
+			},
 		},
 	}
 }
@@ -672,6 +677,10 @@ func resourceRackcorpServerCreate(d *schema.ResourceData, meta interface{}) erro
 		// Required due to omitempty int handling in json serialiser
 		productDetails.HostGroupID = new(int)
 		*productDetails.HostGroupID = hostGroupID.(int)
+	}
+
+	if timezone, ok := d.GetOk("timezone"); ok {
+		productDetails.Timezone = timezone.(string)
 	}
 
 	productCode := api.GetVirtualServerProductCode(
