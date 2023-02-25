@@ -27,7 +27,6 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/section-io/rackcorp-sdk-go/v2 v2.1.0
 	github.com/zclconf/go-cty v1.4.0 // indirect
-	golang.org/x/crypto v0.0.0-20200510223506-06a226fb4e37 // indirect
+	golang.org/x/crypto v0.1.0 // indirect
 	golang.org/x/lint v0.0.0-20190409202823-959b441ac422
-	golang.org/x/net v0.0.0-20200513185701-a91f0712d120 // indirect
 )
